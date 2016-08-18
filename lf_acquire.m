@@ -5,6 +5,7 @@ parse_inputs()
 default_inputs()
 
 H_Stim = udp_open();
+cleanup_obj = onCleanup(@() udp_close(H_Stim));
 
 %% set camera params
 
@@ -22,9 +23,10 @@ AT_CheckWarning(rc);
 AT_CheckWarning(rc);
 [rc] = AT_SetEnumString(hndl,'SimplePreAmpGainControl','12-bit (low noise)');
 AT_CheckWarning(rc);
-[rc] = AT_SetEnumString(hndl,'PixelEncoding','Mono12');
+[rc] = AT_SetEnumString(hndl,'PixelEncoding','Mono16');
 AT_CheckWarning(rc);
 [rc, framerate] = AT_GetFloat(hndl,'FrameRate');
+AT_CheckWarning(rc);
 
 [rc,imagesize] = AT_GetInt(hndl,'ImageSizeBytes');
 AT_CheckWarning(rc);
@@ -34,12 +36,6 @@ AT_CheckWarning(rc);
 AT_CheckWarning(rc);
 [rc,stride] = AT_GetInt(hndl,'AOIStride');
 AT_CheckWarning(rc);
-for X = 1:10
-    [rc] = AT_QueueBuffer(hndl,imagesize);
-    AT_CheckWarning(rc);
-end
-
-disp('ready to acquire')
 
 %% wait for UDP input
 
@@ -51,54 +47,50 @@ while(~started) % wait for UDP msg signalling stim on to be received
     end
 end
 
-frameCount_stim = floor(stimduration/framerate);
-frameCount_baseline = floor((isi-saving_factor*stimduration)/(1+saving_factor)/framerate);
+frameCount = floor(stimduration*framerate);
+rc = AT_SetInt(hndl,'FrameCount',frameCount);
+AT_CheckWarning(rc);
 
-
-% prompt = {'Enter Acquisition name','Enter number of images'};
-% dlg_title = 'Configure acquisition';
-% num_lines = 1;
-% def = {'acquisition','10'};
-% answer = inputdlg(prompt,dlg_title,num_lines,def);
+disp('ready to acquire')
 
 tic
-% filename = cell2mat(answer(1));
-% frameCount = str2double(cell2mat(answer(2)));
 
-[rc] = AT_SetInt(hndl,'FrameCount',frameCount);
-AT_CheckWarning(rc);
-
-disp('Starting acquisition...');
-[rc] = AT_Command(hndl,'AcquisitionStart');
-AT_CheckWarning(rc);
 j=0;
+done = 0;
+% foldname_lf = 'E:/Dan/LF2P/';
 while(~done)
+    [rc] = AT_Flush(hndl);
+    AT_CheckWarning(rc);
+    for X = 1:10
+        [rc] = AT_QueueBuffer(hndl,imagesize);
+        AT_CheckWarning(rc);
+    end
     fid = fopen([foldname_lf ddigit(j,3) '.dat'],'w');
     i=0;
+    disp('Starting acquisition...');
+    [rc] = AT_Command(hndl,'AcquisitionStart');
+    AT_CheckWarning(rc);
     while(i<frameCount)
-        [rc,buf] = AT_WaitBuffer(hndl,AT_INFINITY);
+        [rc,buf] = AT_WaitBuffer(hndl,1000);
         AT_CheckWarning(rc);
         [rc] = AT_QueueBuffer(hndl,imagesize);
         AT_CheckWarning(rc);
-        %     [rc,buf2] = AT_ConvertMono16ToMatrix(buf,height,width,stride);
-        %     AT_CheckWarning(rc);
-        %
-        %     thisFilename = strcat(filename, num2str(i+1), '.tiff');
-        %     disp(['Writing Image ', num2str(i+1), '/',num2str(frameCount),' to disk']);
-        %     imwrite(buf2,thisFilename) %saves to current directory
-        fwrite(fid,buf)
-        i = i+1;
+        if ~isempty(buf)
+            i = i+1;
+            fwrite(fid,buf)
+        end
         toc
         tic
     end
+    done = 0;
     fclose(fid);
     j = j+1;
+    disp('Acquisition complete');
+    [rc] = AT_Command(hndl,'AcquisitionStop');
+    AT_CheckWarning(rc);
+    [rc] = AT_Flush(hndl);
+    AT_CheckWarning(rc);
 end
-disp('Acquisition complete');
-[rc] = AT_Command(hndl,'AcquisitionStop');
-AT_CheckWarning(rc);
-[rc] = AT_Flush(hndl);
-AT_CheckWarning(rc);
 [rc] = AT_Close(hndl);
 AT_CheckWarning(rc);
 [rc] = AT_FinaliseLibrary();
@@ -126,6 +118,9 @@ toc
             case 'G'
                 args = strsplit(msg(2:end),';');
                 foldname_lf = format_fold(args{1});
+                if(~exist(foldname_lf,'dir'))
+                    mkdir(foldname_lf);
+                end
                 disp(foldname_lf)
                 stimduration = str2double(args{2});
                 isi = str2double(args{3});
@@ -161,11 +156,7 @@ toc
         % assign to default values
         
         if ~exist('ExposureTime','var') || isempty(ExposureTime)
-            ExposureTime = 0.05;
-        end
-        if ~exist('saving_factor','var') || isempty(saving_factor)
-            saving_factor = 1.0;
-            % empirical constant; acq_time*saving_factor >= saving_time
+            ExposureTime = 0.022;
         end
     end
 end
