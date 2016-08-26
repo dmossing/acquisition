@@ -4,11 +4,12 @@ function lf_acquire(varargin)
 parse_inputs()
 default_inputs()
 
-H_Stim = udp_open();
-cleanup_obj_udp = onCleanup(@() udp_close(H_Stim));
-
-lj = labjack_open();
-cleanup_obj_lj = onCleanup(@() labjack_close(lj));
+if triggered
+    H_Stim = udp_open();
+    cleanup_obj_udp = onCleanup(@() udp_close(H_Stim));
+    lj = labjack_open();
+    cleanup_obj_lj = onCleanup(@() labjack_close(lj));
+end
 
 %% set camera params
 
@@ -26,7 +27,7 @@ AT_CheckWarning(rc);
 AT_CheckWarning(rc);
 [rc] = AT_SetEnumString(hndl,'SimplePreAmpGainControl','12-bit (low noise)');
 AT_CheckWarning(rc);
-[rc] = AT_SetEnumString(hndl,'PixelEncoding','Mono16');
+[rc] = AT_SetEnumString(hndl,'PixelEncoding','Mono12'); % need to make sure I can still read this
 AT_CheckWarning(rc);
 [rc, framerate] = AT_GetFloat(hndl,'FrameRate');
 AT_CheckWarning(rc);
@@ -45,57 +46,76 @@ AT_CheckWarning(rc);
 started = 0;
 
 if triggered
+    checkevery = 5; % check every (this #) seconds for UDP command during acq
     while ~started % wait for UDP msg signalling stim on to be received
         if H_Stim.BytesAvailable
             [started,done] = process_stim_input(H_Stim);
         end
     end
+else
+    checkevery = duration;
 end
 
-frameCount = floor(stimduration*framerate);
-rc = AT_SetInt(hndl,'FrameCount',frameCount);
-AT_CheckWarning(rc);
+frameCount = floor(checkevery*framerate);
+if ~triggered
+    rc = AT_SetInt(hndl,'FrameCount',frameCount);
+    AT_CheckWarning(rc);
+end
 
 disp('ready to acquire')
 
 tic
 
-j=0;
 done = 0;
-% foldname_lf = 'E:/Dan/LF2P/';
-while(~done)
-    [rc] = AT_Flush(hndl);
+[rc] = AT_Flush(hndl);
+AT_CheckWarning(rc);
+for X = 1:10
+    [rc] = AT_QueueBuffer(hndl,imagesize);
     AT_CheckWarning(rc);
-    for X = 1:10
-        [rc] = AT_QueueBuffer(hndl,imagesize);
-        AT_CheckWarning(rc);
-    end
-    fid = fopen([foldname_lf ddigit(j,3) '.dat'],'w');
+end
+fid_im = fopen([filename_lf '.dat'],'w');
+fid_stim = fopen([filename_lf '.ctr'],'w');
+
+closefiles = onCleanup(@() fclose(fid_im), fclose(fid_im));
+
+disp('Starting acquisition...');
+[rc] = AT_Command(hndl,'AcquisitionStart');
+AT_CheckWarning(rc);
+while ~done
+    % record of the stim counter var for each frame
     i=0;
-    disp('Starting acquisition...');
-    [rc] = AT_Command(hndl,'AcquisitionStart');
-    AT_CheckWarning(rc);
-    while(i<frameCount)
+    while i<frameCount
         [rc,buf] = AT_WaitBuffer(hndl,1000);
         AT_CheckWarning(rc);
         [rc] = AT_QueueBuffer(hndl,imagesize);
         AT_CheckWarning(rc);
         if ~isempty(buf)
+            fwrite(fid_im,buf,'uint8')
+            if triggered
+                stimct = labjack_get_ctr(lj);
+                fwrite(fid_stim,stimct,'uint16');
+            end
             i = i+1;
-            fwrite(fid,buf)
         end
         toc
         tic
     end
-    done = 0;
-    fclose(fid);
-    j = j+1;
-    disp('Acquisition complete');
-    [rc] = AT_Command(hndl,'AcquisitionStop');
-    AT_CheckWarning(rc);
-    [rc] = AT_Flush(hndl);
-    AT_CheckWarning(rc);
+    if triggered
+        if H_Stim.BytesAvailable
+            [started,done] = process_stim_input(H_Stim);
+        end
+    else
+        done = 1;
+    end
 end
+fclose(fid_im);
+fclose(fid_stim);
+disp('Acquisition complete');
+[rc] = AT_Command(hndl,'AcquisitionStop');
+AT_CheckWarning(rc);
+[rc] = AT_Flush(hndl);
+AT_CheckWarning(rc);
+
 [rc] = AT_Close(hndl);
 AT_CheckWarning(rc);
 [rc] = AT_FinaliseLibrary();
@@ -126,17 +146,29 @@ toc
                 if(~exist(foldname_lf,'dir'))
                     mkdir(foldname_lf);
                 end
-                disp(foldname_lf)
-                stimduration = str2double(args{2});
-                isi = str2double(args{3});
+                filename_lf = [foldname_lf args{2}];
+                disp(filename_lf)
                 started = 1;
                 done = 0;
             case 'S'
                 udp_close(H_Stim);
+                labjack_close(lj);
                 disp('finished')
                 started = 1;
                 done = 1;
         end
+    end
+
+%% local LabJack functions
+
+    function labjack_open()
+        
+    end
+
+    function labjack_close(lj_handle)
+    end
+
+    function labjack_get_ctr(lj_handle)
     end
 
 %% local input parsing functions
@@ -165,6 +197,10 @@ toc
         end
         if ~exist('triggered','var') || isempty(triggered)
             triggered = true;
+        end
+        % 'duration' will set the length of the recording if not triggered
+        if ~triggered && (~exist('duration','var') || isempty(duration))
+            duration = 60;
         end
     end
 end
