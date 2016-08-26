@@ -5,7 +5,10 @@ parse_inputs()
 default_inputs()
 
 H_Stim = udp_open();
-cleanup_obj = onCleanup(@() udp_close(H_Stim));
+cleanup_obj_udp = onCleanup(@() udp_close(H_Stim));
+
+lj = labjack_open();
+cleanup_obj_lj = onCleanup(@() labjack_close(lj));
 
 %% set camera params
 
@@ -41,9 +44,11 @@ AT_CheckWarning(rc);
 
 started = 0;
 
-while(~started) % wait for UDP msg signalling stim on to be received
-    if H_Stim.BytesAvailable
-        [started,done] = process_stim_input(H_Stim);
+if triggered
+    while ~started % wait for UDP msg signalling stim on to be received
+        if H_Stim.BytesAvailable
+            [started,done] = process_stim_input(H_Stim);
+        end
     end
 end
 
@@ -143,8 +148,8 @@ toc
                 case 'ExposureTime'
                     ExposureTime = varargin{ctr+1};
                     ctr = ctr+2;
-                case 'saving_factor'
-                    saving_factor = varargin{ctr+1};
+                case 'triggered'
+                    triggered = varargin{ctr+2};
                     ctr = ctr+2;
                 otherwise
                     error(sprintf('invalid argument %s',varargin{ctr}))
@@ -157,6 +162,9 @@ toc
         
         if ~exist('ExposureTime','var') || isempty(ExposureTime)
             ExposureTime = 0.022;
+        end
+        if ~exist('triggered','var') || isempty(triggered)
+            triggered = true;
         end
     end
 end
