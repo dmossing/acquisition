@@ -1,4 +1,4 @@
-function [ljudObj, ljhandle] = labjack_open();
+function [ljudObj, ljhandle] = labjack_open()
 ljasm = NET.addAssembly('LJUDDotNet'); %Make the UD .NET assembly visible in MATLAB
 ljudObj = LabJack.LabJackUD.LJUD;
 
@@ -25,6 +25,30 @@ try
     
     %Execute the requests.
     ljudObj.GoOne(ljhandle);
-        
+    
     %Get all the results just to check for errors.
     [ljerror, ioType, channel, dblValue, dummyInt, dummyDbl] = ljudObj.GetFirstResult(ljhandle, 0, 0, 0, 0, 0);
+    
+    finished = false;
+    while finished == false
+        try
+            [ljerror, ioType, channel, dblValue, dummyInt, dummyDbl] = ljudObj.GetNextResult(ljhandle, 0, 0, 0, 0, 0);
+        catch e
+            if(isa(e, 'NET.NetException'))
+                eNet = e.ExceptionObject;
+                if(isa(eNet, 'LabJack.LabJackUD.LabJackUDException'))
+                    %If we get an error, report it.  If the error is NO_MORE_DATA_AVAILABLE we are done
+                    if(eNet.LJUDError == LabJack.LabJackUD.LJUDERROR.NO_MORE_DATA_AVAILABLE)
+                        finished = true;
+                    end
+                end
+            end
+            %Report non NO_MORE_DATA_AVAILABLE error.
+            if(finished == false)
+                throw(e)
+            end
+        end
+    end
+catch e
+    showErrorMessage(e)
+end
