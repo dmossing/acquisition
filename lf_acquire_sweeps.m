@@ -1,4 +1,4 @@
-function lf_acquire(varargin)
+function lf_acquire_sweeps(varargin)
 %% initialize inputs and UDP
 
 parse_inputs(varargin{:})
@@ -14,10 +14,17 @@ AT_CheckError(rc);
 disp('Camera initialized');
 [rc] = AT_SetFloat(hndl,'ExposureTime',ExposureTime);
 AT_CheckWarning(rc);
-[rc] = AT_SetEnumString(hndl,'CycleMode','Fixed');
-AT_CheckWarning(rc);
-[rc] = AT_SetEnumString(hndl,'TriggerMode','Internal');
-AT_CheckWarning(rc);
+if triggered
+    [rc] = AT_SetEnumString(hndl,'CycleMode','Continuous');
+    AT_CheckWarning(rc);
+    [rc] = AT_SetEnumString(hndl,'TriggerMode','External Start');
+    AT_CheckWarning(rc);
+else
+    [rc] = AT_SetEnumString(hndl,'CycleMode','Fixed');
+    AT_CheckWarning(rc);
+    [rc] = AT_SetEnumString(hndl,'TriggerMode','Internal');
+    AT_CheckWarning(rc);
+end
 [rc] = AT_SetEnumString(hndl,'SimplePreAmpGainControl','12-bit (low noise)');
 AT_CheckWarning(rc);
 [rc] = AT_SetEnumString(hndl,'PixelEncoding','Mono12'); % need to make sure I can still read this
@@ -54,11 +61,11 @@ if triggered
 end
 checkevery = record_for;
 
-frameCount = floor(checkevery*framerate);
-% if ~triggered
-rc = AT_SetInt(hndl,'FrameCount',frameCount);
-AT_CheckWarning(rc);
-% end
+if ~triggered
+    frameCount = floor(checkevery*framerate);
+    rc = AT_SetInt(hndl,'FrameCount',frameCount);
+    AT_CheckWarning(rc);
+end
 
 disp('ready to acquire')
 
