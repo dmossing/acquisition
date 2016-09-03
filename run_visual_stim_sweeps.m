@@ -323,7 +323,7 @@ Screen('Preference','SkipSyncTests', 0);
 bg = ones(yRes,xRes)*Bcol;
 BG = Screen('MakeTexture', w, bg);
 
-totalsec = result.zplanes*allConds*result.repetitions*(isi+stimduration);
+trigpersweep = 2*allConds;
 totaltrig = 2*result.zplanes*allConds*result.repetitions;
 
 Screen('DrawTexture',w, BG);
@@ -347,7 +347,7 @@ else
     if strcmp(modality,'2p')
         fprintf(H_Scanbox,'G'); %go
     else
-        fprintf(H_lf,sprintf('G%s/;%s_%s_%s;%d;', lffolder, base, depth, fileindex,totalsec));
+        fprintf(H_lf,sprintf('G%s/;%s_%s_%s;%d', lffolder, base, depth, fileindex, trigpersweep));
     end
     pause(5);
     
@@ -528,6 +528,7 @@ else
                     KbWait([],2); %wait for all keys to be released and then any key to be pressed again
                 end
             end
+            pause(5)
         end
         outputSingleScan(daq,[0 1 0])
         outputSingleScan(daq,[0 1 1])

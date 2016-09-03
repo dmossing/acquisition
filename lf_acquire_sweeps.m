@@ -63,6 +63,7 @@ checkevery = record_for;
 
 if ~triggered
     frameCount = floor(checkevery*framerate);
+    sweepCount = 2;
     rc = AT_SetInt(hndl,'FrameCount',frameCount);
     AT_CheckWarning(rc);
 end
@@ -74,72 +75,85 @@ tic
 done = 0;
 [rc] = AT_Flush(hndl);
 AT_CheckWarning(rc);
-for X = 1:1000
+for X = 1:2000
     [rc] = AT_QueueBuffer(hndl,imagesize);
     AT_CheckWarning(rc);
 end
 fid_im = fopen([foldname_lf filename_lf '.dat'],'w');
-fid_stim = fopen([foldname_lf filename_lf '.ctr'],'w');
+if triggered
+    fid_stim = fopen([foldname_lf filename_lf '.ctr'],'w');
+end
 
 closefiles = onCleanup(@() fclose('all'));
 
 disp('Starting acquisition...');
 % while ~done
 % record of the stim counter var for each frame
-i=0;
-[rc] = AT_Command(hndl,'AcquisitionStart');
-AT_CheckWarning(rc);
-while i<frameCount
-    [rc,buf] = AT_WaitBuffer(hndl,1000);
-    AT_CheckWarning(rc);
-    [rc] = AT_QueueBuffer(hndl,imagesize);
-    AT_CheckWarning(rc);
-    if ~isempty(buf)
-        fwrite(fid_im,buf,'uint8')
-        if triggered
-            stimct = labjack_get_ctr(lj_obj,lj_h);
-            fwrite(fid_stim,stimct,'uint16');
-            %             if stimct > stimmax
-            %                 i = i+1;
-            %                 break
-            %             end
-        end
-        i = i+1;
-    end
-    toc
-    tic
-end
+
 % [rc] = AT_Command(hndl,'AcquisitionStop');
 % AT_CheckWarning(rc);
 tic
 if triggered
     while ~done
-        %         [rc,buf] = AT_WaitBuffer(hndl,1000);
-        %         AT_CheckWarning(rc);
-        %         [rc] = AT_QueueBuffer(hndl,imagesize);
-        %         AT_CheckWarning(rc);
-        %         if ~isempty(buf)
-        %             fwrite(fid_im,buf,'uint8')
-        %             stimct = labjack_get_ctr(lj_obj,lj_h);
-        %             fwrite(fid_stim,stimct,'uint16');
-        %         end
-        %         i = i+1;
+        stimct=0;
+        i=0;
+        [rc] = AT_Command(hndl,'AcquisitionStart');
+        AT_CheckWarning(rc);
+        while stimct < trigpersweep && i < 5000
+            [rc,buf] = AT_WaitBuffer(hndl,1000);
+            AT_CheckWarning(rc);
+            [rc] = AT_QueueBuffer(hndl,imagesize);
+            AT_CheckWarning(rc);
+            if ~isempty(buf)
+                fwrite(fid_im,buf,'uint8')
+                stimct = labjack_get_ctr(lj_obj,lj_h);
+                i = i+1;
+            end
+            toc
+            tic
+        end
+        [rc] = AT_Command(hndl,'AcquisitionStop');
+        AT_CheckWarning(rc);
+        [rc] = AT_Flush(hndl);
+        AT_CheckWarning(rc);
         if H_Stim.BytesAvailable
             [started,done] = process_stim_input(H_Stim);
         end
     end
 else
-    done = 1;
+    s=0;
+    while s < sweepCount
+        toc
+        tic
+        i=0;
+        [rc] = AT_Command(hndl,'AcquisitionStart');
+        AT_CheckWarning(rc);
+        while i < frameCount
+            [rc,buf] = AT_WaitBuffer(hndl,1000);
+            AT_CheckWarning(rc);
+            [rc] = AT_QueueBuffer(hndl,imagesize);
+            AT_CheckWarning(rc);
+            if ~isempty(buf)
+                fwrite(fid_im,buf,'uint8')
+                i = i+1;
+            end
+            toc
+            tic
+            [rc] = AT_Command(hndl,'AcquisitionStop');
+            AT_CheckWarning(rc);
+            [rc] = AT_Flush(hndl);
+            AT_CheckWarning(rc);
+        end
+        s = s+1;
+    end
 end
 toc
 % end
 fclose(fid_im);
-fclose(fid_stim);
+if triggered
+    fclose(fid_stim);
+end
 disp('Acquisition complete');
-[rc] = AT_Command(hndl,'AcquisitionStop');
-AT_CheckWarning(rc);
-[rc] = AT_Flush(hndl);
-AT_CheckWarning(rc);
 
 [rc] = AT_Close(hndl);
 AT_CheckWarning(rc);
@@ -173,8 +187,8 @@ toc
                 end
                 filename_lf = [foldname_lf args{2}];
                 disp(filename_lf)
-                record_for = floor(1.1*str2num(args{3}))+30;
-                stimmax = str2num(args{4});
+%                 record_for = floor(1.1*str2num(args{3}))+30;
+                trigpersweep = str2num(args{3});
                 started = 1;
                 done = 0;
             case 'S'
