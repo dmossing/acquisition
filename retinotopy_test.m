@@ -29,6 +29,7 @@ AT_CheckWarning(rc);
 ct = 0;
 avg = zeros(width,height);
 buf2 = zeros(width,height);
+figure(1)
 h=imagesc(buf2);
 while(ishandle(h))
     [rc] = AT_QueueBuffer(hndl,imagesize);
@@ -63,7 +64,7 @@ while(ishandle(h))
     set(h,'CData',dfof);
     drawnow;
     ct = ct+1;
-    sofar = sofar+double(buf2);
+    sofar = sofar+dfof;
 %     if ct > 200
 %         avg = sofar/ct;
 %         avg_filt = imgaussfilt(avg,100);
@@ -71,6 +72,41 @@ while(ishandle(h))
 %         sofar = zeros(width,height);
 %     end
 end
+
+im1 = sofar;
+figure(2)
+imagesc(im1)
+
+figure(1)
+h=imagesc(buf2,[0 1]);
+ct = 0;
+sofar = zeros(width,height);
+while(ishandle(h))
+    [rc] = AT_QueueBuffer(hndl,imagesize);
+    AT_CheckWarning(rc);
+    [rc] = AT_Command(hndl,'SoftwareTrigger');
+    AT_CheckWarning(rc);
+    [rc,buf] = AT_WaitBuffer(hndl,1000);
+    AT_CheckWarning(rc);
+    [rc,buf2] = AT_ConvertMono16ToMatrix(buf,height,width,stride);
+    AT_CheckWarning(rc);
+    dfof = (double(buf2) - avg)./avg_filt;
+    set(h,'CData',dfof);
+    drawnow;
+    ct = ct+1;
+    sofar = sofar+dfof;
+%     if ct > 200
+%         avg = sofar/ct;
+%         avg_filt = imgaussfilt(avg,100);
+%         ct = 0;
+%         sofar = zeros(width,height);
+%     end
+end
+
+im2 = sofar;
+figure(3)
+imagesc(im2)
+
 disp('Acquisition complete');
 [rc] = AT_Command(hndl,'AcquisitionStop');
 AT_CheckWarning(rc);
