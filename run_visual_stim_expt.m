@@ -130,11 +130,11 @@ if ~exist('sizes','var') || isempty(sizes)
 end
 
 if ~exist('cyclesPerVisDeg','var') || isempty(cyclesPerVisDeg)
-    cyclesPerVisDeg = 0.08;
+    cyclesPerVisDeg = 0.04;
 end
 
 if ~exist('cyclesPerSecond','var') || isempty(cyclesPerSecond)
-    cyclesPerSecond = 1;
+    cyclesPerSecond = 2;
 end
 
 if ~exist('position','var') || isempty(position)
