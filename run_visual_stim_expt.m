@@ -76,7 +76,7 @@ elseif animalid(1)=='F'
 else
     error('invalid animal id')
 end
-    
+
 
 if ~exist('depth','var') || isempty(depth)
     depth = '000';
@@ -114,7 +114,7 @@ end
 if ~exist('VertScreenSize','var') || isempty(VertScreenSize)
     switch species
         case 'mouse'
-            VertScreenSize = 16;
+            VertScreenSize = 27;
         case 'fish'
             VertScreenSize = 2;
     end
@@ -123,7 +123,7 @@ end
 if ~exist('sizes','var') || isempty(sizes)
     switch species
         case 'mouse'
-            sizes = 15;
+            sizes = 25;
         case 'fish'
             sizes = 30;
     end
@@ -146,7 +146,7 @@ if ~exist('zplanes','var') || isempty(zplanes)
 end
 
 if ~exist('ScreenType','var') || isempty(ScreenType)
-    ScreenType = 'projector';
+    ScreenType = 'monitor';
 end
 
 % lights_off;
@@ -191,9 +191,9 @@ assert(strcmp(modality,'2p') || strcmp(modality,'lf'));
 if strcmp(ScreenType,'projector')
     xRes = 1024; yRes = 768;
 else
-    xRes = 1400; yRes = 1050;
+    xRes = 1280; yRes = 1024;
 end
-dos(['C:\Users\Resonant-2\Downloads\nircmd-x64\nircmd.exe setdisplay ' num2str(xRes) ' ' num2str(yRes) ' 32']);
+% dos(['C:\Users\Resonant-2\Downloads\nircmd-x64\nircmd.exe setdisplay ' num2str(xRes) ' ' num2str(yRes) ' 32']);
 
 VertScreenDimDeg = atand(VertScreenSize/DScreen); % in visual degrees
 PixperDeg = yRes/VertScreenDimDeg;
@@ -224,26 +224,30 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-
-if strcmp('modality','2p')
-
-% set up scanbox communication
-
-sb_ip = '128.32.173.30'; % SCANBOX ONLY: for UDP
-sb_port = 7000; % SCANBOX ONLY: for UDP
-
-% initialize connection
-H_Scanbox = udp(sb_ip, 'RemotePort', sb_port); % create udp port handle
-fopen(H_Scanbox);
-
-% clean up udp connection in case of Ctrl-C
-cleanup_udp_Scanbox = onCleanup(@(), terminate_udp(H_Scanbox));
-
-% write filename
-fprintf(H_Scanbox,sprintf('A%s',base));
-fprintf(H_Scanbox,sprintf('U%s',depth));
-fprintf(H_Scanbox,sprintf('E%s',fileindex));
-
+runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
+runfolder = [runpath dstr '/' base];
+if ~exist(runfolder,'dir')
+    mkdir(runfolder)
+end
+if strcmp(modality,'2p')
+    
+    % set up scanbox communication
+    
+    sb_ip = '128.32.173.30'; % SCANBOX ONLY: for UDP
+    sb_port = 7000; % SCANBOX ONLY: for UDP
+    
+    % initialize connection
+    H_Scanbox = udp(sb_ip, 'RemotePort', sb_port); % create udp port handle
+    fopen(H_Scanbox);
+    
+    % clean up udp connection in case of Ctrl-C
+    cleanup_udp_Scanbox = onCleanup(@() terminate_udp(H_Scanbox));
+    
+    % write filename
+    fprintf(H_Scanbox,sprintf('A%s',base));
+    fprintf(H_Scanbox,sprintf('U%s',depth));
+    fprintf(H_Scanbox,sprintf('E%s',fileindex));
+    
 else
     
     lf_ip = '128.32.19.203';
@@ -274,12 +278,12 @@ base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
 
-% write filename
-runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
-runfolder = [runpath dstr '/' base];
-if ~exist(runfolder,'dir')
-    mkdir(runfolder)
-end
+% % write filename
+% runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
+% runfolder = [runpath dstr '/' base];
+% if ~exist(runfolder,'dir')
+%     mkdir(runfolder)
+% end
 fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
 
 % % set up audio indicator
@@ -336,7 +340,9 @@ if kinp == 'q'|kinp == 'Q',
 else
     outputSingleScan(daq,[0 1 0]);
     % start imaging
-    fprintf(H_Scanbox,'G'); %go
+    if strcmp(modality,'2p')
+        fprintf(H_Scanbox,'G'); %go
+    end
     pause(5);
     
     Screen('DrawTexture',w, BG);
@@ -535,8 +541,9 @@ else
 end
 
 % % stop imaging
-
-terminate_udp(H_Scanbox)
+if strcmp(modality,'2p')
+    terminate_udp(H_Scanbox)
+end
 terminate_udp(H_Run)
 
 %fprintf(H_Scanbox,'S'); %stop
@@ -549,11 +556,11 @@ terminate_udp(H_Run)
 
 % STOP ACQUISITION ON SCANBOX !!!
 
-function terminate_udp(handle)
-    fprintf(handle,'S');
-    fclose(handle);
-    delete(handle);
-end
+    function terminate_udp(handle)
+        fprintf(handle,'S');
+        fclose(handle);
+        delete(handle);
+    end
 
 end
 
