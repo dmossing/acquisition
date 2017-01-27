@@ -1,5 +1,5 @@
 function [xpos,ypos] = map_retinotopy_stim(ratio,orientations,DScreen,...
-    ScreenType,gratingSize,spFreq,tFreq)
+    ScreenType,gratingSize,spFreq,tFreq,numlocs)
 
 if nargin<2 || isempty(orientations)
     orientations = 0:45:315;
@@ -19,6 +19,9 @@ end
 if nargin<7 || isempty(tFreq)
     tFreq = 2;
 end
+if nargin<8 || isempty(numlocs)
+    numlocs = 3;
+end
 
 % set up DAQ
 
@@ -27,7 +30,7 @@ addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
 addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
 addDigitalChannel(daq,'Dev3','port0/line2','OutputOnly'); % complete stim protocol, move in z
 
-outputSingleScan([0 0 0]);
+outputSingleScan(daq, [0 0 0]);
 
 frameRate = 60;     % Hz
 assert(strcmp(ScreenType,'projector') || strcmp(ScreenType,'monitor'));
@@ -111,7 +114,12 @@ try
     outputSingleScan(daq,[1 1 0])
     outputSingleScan(daq,[0 1 0])
     
+    gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
+    oriIndex = 1;
     blankFrameIndex = 1;
+    buttons = 0; % When the user clicks the mouse, 'buttons' becomes nonzero.
+    mX = 0; % The x-coordinate of the mouse cursor
+    mY = 0; % The y-coordinate of the mouse cursor
     % Draw the sprite at the new location.
     while oriIndex <= nori
         Screen('DrawTexture', window, blankFrame(blankFrameIndex,oriIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
@@ -131,17 +139,18 @@ try
     outputSingleScan(daq,[1 1 0])
     outputSingleScan(daq,[0 1 0])
     
-    % ------ Bookkeeping Variables ------
-    
-    gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
-    gratingFrameIndex = 1; % Which frame of the animation should we show?
-    oriIndex = 1;
-    buttons = 0; % When the user clicks the mouse, 'buttons' becomes nonzero.
-    mX = 0; % The x-coordinate of the mouse cursor
-    mY = 0; % The y-coordinate of the mouse cursor
+%     numlocs = 5;
     
     % Exit the demo as soon as the user presses a mouse button.
     for i=1:numlocs
+        % ------ Bookkeeping Variables ------
+        
+        gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
+        gratingFrameIndex = 1; % Which frame of the animation should we show?
+        oriIndex = 1;
+        buttons = 0; % When the user clicks the mouse, 'buttons' becomes nonzero.
+        mX = 0; % The x-coordinate of the mouse cursor
+        mY = 0; % The y-coordinate of the mouse cursor
         while ~any(buttons)
             % We need to redraw the text or else it will disappear after a
             % subsequent call to Screen('Flip').
@@ -171,6 +180,7 @@ try
         outputSingleScan(daq,[0 1 0])
         outputSingleScan(daq,[1 1 0])
         outputSingleScan(daq,[0 1 0])
+        pause(1)
     end
     
     for i=1:10
@@ -194,7 +204,7 @@ try
     Screen('Preference', 'SuppressAllWarnings', oldSupressAllWarnings);
     
 catch
-    
+    disp('error')
     % If there is an error in our try block, let's
     % return the user to the familiar MATLAB prompt.
     ShowCursor;
