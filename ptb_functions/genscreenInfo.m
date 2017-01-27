@@ -11,12 +11,15 @@ screenInfo.Bcol = Bcol;
 screenInfo.frameRate = frameRate;
 
 screenNumber = max(Screen('Screens'));
+screenInfo.screenNumber = screenNumber;
 
 blI = BlackIndex(screenNumber);
 whI = WhiteIndex(screenNumber);
-maxDiff = abs(whI - blI);
+screenInfo.blI = blI;
+screenInfo.whI = whI;
+screenInfo.maxDiff = abs(whI - blI);
 
-oldVisualDebugLevel = Screen('Preference', 'VisualDebugLevel', 3);
-oldSupressAllWarnings = Screen('Preference', 'SuppressAllWarnings', 1);
+screenInfo.oldVisualDebugLevel = Screen('Preference', 'VisualDebugLevel', 3);
+screenInfo.oldSupressAllWarnings = Screen('Preference', 'SuppressAllWarnings', 1);
 
 screenInfo.window = Screen('OpenWindow', screenNumber, Bcol);

@@ -53,65 +53,68 @@ end
 % % orientation = 180;    % degrees
 % % spFreq = .04;       % cycles/degree
 % % tFreq = 1;          % cycles/s
-% 
+%
 % PixperDeg=yRes/VertScreenDimDeg;
 % Bcol=128;
 % numFrames=ceil(frameRate/tFreq);
 % sizeGrating = gratingSize*PixperDeg;
 % width = round(sizeGrating/2);
-
+Bcol = 128;
+screenInfo = genscreenInfo(xRes,yRes,VertCRTSize,DScreen,frameRate,Bcol);
+% oldVisualDebugLevel = Screen('Preference', 'VisualDebugLevel', 3);
+% oldSupressAllWarnings = Screen('Preference', 'SuppressAllWarnings', 1);
+window = screenInfo.window;
 try
-    screenInfo = genscreenInfo(xRes,yRes,VertCRTSize,DScreen,Bcol);
     
-%     screenNumber = max(Screen('Screens'));
-%     
-%     blI = BlackIndex(screenNumber);
-%     whI = WhiteIndex(screenNumber);
-%     maxDiff = abs(whI - blI);
-%     
-%     oldVisualDebugLevel = Screen('Preference', 'VisualDebugLevel', 3);
-%     oldSupressAllWarnings = Screen('Preference', 'SuppressAllWarnings', 1);
-%     
-%     window = Screen('OpenWindow', screenNumber, Bcol);
-%     
-%     %     load('GammaTable.mat');
-%     %     CT = (ones(3,1)*correctedTable(:,2)')'/255;
-%     %     Screen('LoadNormalizedGammaTable',window, CT);
-%     
-%     %     HideCursor;
-%     
-%     [x,y]=meshgrid([-width:width],[-width:width]);
+    %     screenNumber = max(Screen('Screens'));
+    %
+    %     blI = BlackIndex(screenNumber);
+    %     whI = WhiteIndex(screenNumber);
+    %     maxDiff = abs(whI - blI);
+    %
+    
+    %
+    %     window = Screen('OpenWindow', screenNumber, Bcol);
+    %
+    %     %     load('GammaTable.mat');
+    %     %     CT = (ones(3,1)*correctedTable(:,2)')'/255;
+    %     %     Screen('LoadNormalizedGammaTable',window, CT);
+    %
+    %     %     HideCursor;
+    %
+    %     [x,y]=meshgrid([-width:width],[-width:width]);
     nori = numel(orientations);
     nCycles = 1;
     numFrames=ceil(nCycles*frameRate/tFreq);
+    sizeGrating = ceil(gratingSize*screenInfo.PixperDeg);
     for j = 1:nori
-        gratingInfo = gengratingInfo(gratingSize,spFreq,tFreq,orientations(j),nCycles);
+        gratingInfo = gengratingInfo(gratingSize,spFreq,tFreq,orientations(j));
         for i = 1:numFrames
-%             phase=(i/numFrames)*2*pi;
-%             angle=orientations(j)*pi/180; % 30 deg orientation.
-%             f=(spFreq)/PixperDeg*2*pi; % cycles/pixel
-%             a=cos(angle)*f;
-%             b=sin(angle)*f;
-%             g0=exp(-((x/(5*width)).^2)-((y/(5*width)).^2));
-%             s=sin(a*x+b*y+phase);
-%             ext = max(max(max(s)),abs(min(min(s))));
-%             G0=ext*((s>0)-(s<0));%.*g0;
-%             incmax=min(255-Bcol,Bcol);
-%             G=(floor((incmax*G0)+Bcol));
-%             gratingFrame(i,j) = Screen('MakeTexture', window, G);
+            %             phase=(i/numFrames)*2*pi;
+            %             angle=orientations(j)*pi/180; % 30 deg orientation.
+            %             f=(spFreq)/PixperDeg*2*pi; % cycles/pixel
+            %             a=cos(angle)*f;
+            %             b=sin(angle)*f;
+            %             g0=exp(-((x/(5*width)).^2)-((y/(5*width)).^2));
+            %             s=sin(a*x+b*y+phase);
+            %             ext = max(max(max(s)),abs(min(min(s))));
+            %             G0=ext*((s>0)-(s<0));%.*g0;
+            %             incmax=min(255-Bcol,Bcol);
+            %             G=(floor((incmax*G0)+Bcol));
+            %             gratingFrame(i,j) = Screen('MakeTexture', window, G);
             gratingFrame(i,j) = gengratingFrame(i,gratingInfo,screenInfo);
         end
         for k = 1:ratio*numFrames
-            gratingFrame(numFrames+k,j) = Screen('MakeTexture', window, Bcol*ones(size(G)));
+            gratingFrame(numFrames+k,j) = Screen('MakeTexture', window, Bcol*ones(sizeGrating));
         end
     end
     % generate gray frames for baseline acquisition
     for j = 1:nori
         for i = 1:numFrames
-            blankFrame(i,j) = Screen('MakeTexture', window, Bcol*ones(size(G)));
+            blankFrame(i,j) = Screen('MakeTexture', window, Bcol*ones(sizeGrating));
         end
         for k = 1:ratio*numFrames
-            blankFrame(numFrames+k,j) = Screen('MakeTexture', window, Bcol*ones(size(G)));
+            blankFrame(numFrames+k,j) = Screen('MakeTexture', window, Bcol*ones(sizeGrating));
         end
     end
     
@@ -144,7 +147,7 @@ try
     outputSingleScan(daq,[1 1 0])
     outputSingleScan(daq,[0 1 0])
     
-%     numlocs = 5;
+    %     numlocs = 5;
     
     % Exit the demo as soon as the user presses a mouse button.
     for i=1:numlocs
@@ -159,7 +162,7 @@ try
         while ~any(buttons)
             % We need to redraw the text or else it will disappear after a
             % subsequent call to Screen('Flip').
-            Screen('DrawText', window, 'Move the mouse.  Click to exit', 0, 0, blI);
+            Screen('DrawText', window, 'Move the mouse.  Click to exit', 0, 0, screenInfo.blI);
             
             % Get the location and click state of the mouse.
             previousX = mX;
@@ -197,7 +200,7 @@ try
     
     % Revive the mouse cursor.
     ShowCursor;
-    
+    PixperDeg = screenInfo.PixperDeg;
     xpos = round((mX-xRes/2)/PixperDeg)
     ypos = round((yRes/2-mY)/PixperDeg)
     
@@ -205,8 +208,8 @@ try
     Screen('CloseAll');
     
     % Restore preferences
-    Screen('Preference', 'VisualDebugLevel', oldVisualDebugLevel);
-    Screen('Preference', 'SuppressAllWarnings', oldSupressAllWarnings);
+    Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
+    Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
     
 catch
     disp('error')
@@ -214,8 +217,8 @@ catch
     % return the user to the familiar MATLAB prompt.
     ShowCursor;
     Screen('CloseAll');
-    Screen('Preference', 'VisualDebugLevel', oldVisualDebugLevel);
-    Screen('Preference', 'SuppressAllWarnings', oldSupressAllWarnings);
+    Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
+    Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
     psychrethrow(psychlasterror);
     
 end
