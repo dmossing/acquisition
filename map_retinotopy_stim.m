@@ -30,7 +30,7 @@ addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
 addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
 addDigitalChannel(daq,'Dev3','port0/line2','OutputOnly'); % complete stim protocol, move in z
 
-outputSingleScan(daq, [0 0 0]);
+outputSingleScan(daq,[0 0 0]);
 
 frameRate = 60;     % Hz
 assert(strcmp(ScreenType,'projector') || strcmp(ScreenType,'monitor'));
@@ -41,60 +41,65 @@ else
     xRes = 1280; yRes = 1024;
     VertCRTSize = 27;
 end
-dos(['C:\Users\Resonant-2\Downloads\nir cmd-x64\nircmd.exe setdisplay ' num2str(xRes) ' ' num2str(yRes) ' 32']);
-xovy = xRes/yRes;
-% DScreen=15;         % cm
-% VertCRTSize=15;   % cm
-HorzCRTSize=VertCRTSize*xovy;
-VertScreenDimDeg=atand(VertCRTSize/DScreen);
-HorzScreenDimDeg=atand(HorzCRTSize/DScreen); % this is different from Vert*xovy!! We use vertical
-% gratingSize = 15;   %visual degrees
-% orientation = 180;    % degrees
-% spFreq = .04;       % cycles/degree
-% tFreq = 1;          % cycles/s
 
-PixperDeg=yRes/VertScreenDimDeg;
-numFrames=ceil(frameRate/tFreq);
-Bcol=128;
-sizeGrating = gratingSize*PixperDeg;
-width = round(sizeGrating/2);
+% % dos(['C:\Users\Resonant-2\Downloads\nir cmd-x64\nircmd.exe setdisplay ' num2str(xRes) ' ' num2str(yRes) ' 32']);
+% xovy = xRes/yRes;
+% % DScreen=15;         % cm
+% % VertCRTSize=15;   % cm
+% HorzCRTSize=VertCRTSize*xovy;
+% VertScreenDimDeg=atand(VertCRTSize/DScreen);
+% HorzScreenDimDeg=atand(HorzCRTSize/DScreen); % this is different from Vert*xovy!! We use vertical
+% % gratingSize = 15;   %visual degrees
+% % orientation = 180;    % degrees
+% % spFreq = .04;       % cycles/degree
+% % tFreq = 1;          % cycles/s
+% 
+% PixperDeg=yRes/VertScreenDimDeg;
+% Bcol=128;
+% numFrames=ceil(frameRate/tFreq);
+% sizeGrating = gratingSize*PixperDeg;
+% width = round(sizeGrating/2);
 
 try
+    screenInfo = genscreenInfo(xRes,yRes,VertCRTSize,DScreen,Bcol);
     
-    screenNumber = max(Screen('Screens'));
-    
-    blI = BlackIndex(screenNumber);
-    whI = WhiteIndex(screenNumber);
-    maxDiff = abs(whI - blI);
-    
-    oldVisualDebugLevel = Screen('Preference', 'VisualDebugLevel', 3);
-    oldSupressAllWarnings = Screen('Preference', 'SuppressAllWarnings', 1);
-    
-    window = Screen('OpenWindow', screenNumber, Bcol);
-    
-    %     load('GammaTable.mat');
-    %     CT = (ones(3,1)*correctedTable(:,2)')'/255;
-    %     Screen('LoadNormalizedGammaTable',window, CT);
-    
-    %     HideCursor;
-    
-    [x,y]=meshgrid([-width:width],[-width:width]);
+%     screenNumber = max(Screen('Screens'));
+%     
+%     blI = BlackIndex(screenNumber);
+%     whI = WhiteIndex(screenNumber);
+%     maxDiff = abs(whI - blI);
+%     
+%     oldVisualDebugLevel = Screen('Preference', 'VisualDebugLevel', 3);
+%     oldSupressAllWarnings = Screen('Preference', 'SuppressAllWarnings', 1);
+%     
+%     window = Screen('OpenWindow', screenNumber, Bcol);
+%     
+%     %     load('GammaTable.mat');
+%     %     CT = (ones(3,1)*correctedTable(:,2)')'/255;
+%     %     Screen('LoadNormalizedGammaTable',window, CT);
+%     
+%     %     HideCursor;
+%     
+%     [x,y]=meshgrid([-width:width],[-width:width]);
     nori = numel(orientations);
+    nCycles = 1;
+    numFrames=ceil(nCycles*frameRate/tFreq);
     for j = 1:nori
+        gratingInfo = gengratingInfo(gratingSize,spFreq,tFreq,orientations(j),nCycles);
         for i = 1:numFrames
-            phase=(i/numFrames)*2*pi;
-            
-            angle=orientations(j)*pi/180; % 30 deg orientation.
-            f=(spFreq)/PixperDeg*2*pi; % cycles/pixel
-            a=cos(angle)*f;
-            b=sin(angle)*f;
-            g0=exp(-((x/(5*width)).^2)-((y/(5*width)).^2));
-            s=sin(a*x+b*y+phase);
-            ext = max(max(max(s)),abs(min(min(s))));
-            G0=ext*((s>0)-(s<0));%.*g0;
-            incmax=min(255-Bcol,Bcol);
-            G=(floor((incmax*G0)+Bcol));
-            gratingFrame(i,j) = Screen('MakeTexture', window, G);
+%             phase=(i/numFrames)*2*pi;
+%             angle=orientations(j)*pi/180; % 30 deg orientation.
+%             f=(spFreq)/PixperDeg*2*pi; % cycles/pixel
+%             a=cos(angle)*f;
+%             b=sin(angle)*f;
+%             g0=exp(-((x/(5*width)).^2)-((y/(5*width)).^2));
+%             s=sin(a*x+b*y+phase);
+%             ext = max(max(max(s)),abs(min(min(s))));
+%             G0=ext*((s>0)-(s<0));%.*g0;
+%             incmax=min(255-Bcol,Bcol);
+%             G=(floor((incmax*G0)+Bcol));
+%             gratingFrame(i,j) = Screen('MakeTexture', window, G);
+            gratingFrame(i,j) = gengratingFrame(i,gratingInfo,screenInfo);
         end
         for k = 1:ratio*numFrames
             gratingFrame(numFrames+k,j) = Screen('MakeTexture', window, Bcol*ones(size(G)));
