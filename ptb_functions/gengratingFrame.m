@@ -26,4 +26,5 @@ ext = max(max(max(s)),abs(min(min(s))));
 G0=ext*((s>0)-(s<0));%.*g0;
 incmax=min(255-Bcol,Bcol);
 G=(floor((incmax*G0)+Bcol));
+
 gratingFrame = Screen('MakeTexture', window, G);

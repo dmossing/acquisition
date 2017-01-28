@@ -6,6 +6,8 @@ VertScreenDimDeg=atand(VertCRTSize/DScreen);
 HorzScreenDimDeg=atand(HorzCRTSize/DScreen); % this is different from Vert*xovy!! We use vertical
 PixperDeg=yRes/VertScreenDimDeg;
 
+screenInfo.xRes = xRes;
+screenInfo.yRes = yRes;
 screenInfo.PixperDeg = PixperDeg;
 screenInfo.Bcol = Bcol;
 screenInfo.frameRate = frameRate;
