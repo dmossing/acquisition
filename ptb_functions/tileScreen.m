@@ -1,7 +1,9 @@
 function locs = tileScreen(gratingSize,screenInfo)
 sizeGrating = screenInfo.PixperDeg*gratingSize;
-Ny = floor(screenInfo.yRes/sizeGrating);
-Nx = floor(screenInfo.xRes/sizeGrating);
+yRes = screenInfo.yRes;
+xRes = screenInfo.xRes;
+Ny = floor(yRes/sizeGrating);
+Nx = floor(xRes/sizeGrating);
 % grid = [Ny,Nx];
 locs = zeros(Ny,Nx,2);
 for i=1:Ny

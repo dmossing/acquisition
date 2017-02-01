@@ -30,7 +30,18 @@ addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
 addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
 addDigitalChannel(daq,'Dev3','port0/line2','OutputOnly'); % complete stim protocol, move in z
 
+% set up msocket
+
+srvsock = mslisten(3000);
+% tell the other PC to open up a socket
 outputSingleScan(daq,[0 0 0]);
+outputSingleScan(daq,[1 0 0]);
+outputSingleScan(daq,[0 0 0]);
+pause(1)
+% assume the other PC has responded by requesting a connection by this
+% point
+sock = msaccept(srvsock);
+msclose(srvsock);
 
 frameRate = 60;     % Hz
 assert(strcmp(ScreenType,'projector') || strcmp(ScreenType,'monitor'));
@@ -50,11 +61,16 @@ try
     locs = tileScreen(gratingSize,screenInfo);
     [ny,nx,~] = size(locs);
     nori = numel(orientations);
-    [indy,indx,indo,~] = meshgrid(1:ny,1:nx,1:nori,1:nreps);
-    order = randperm(ny*nx*nori*nreps);
-    locinds = [indy(order) indx(order)];
+    [indy,indx,indo] = meshgrid(1:ny,1:nx,1:nori);
+    order = randperm(ny*nx*nori);
+    locinds = [indy(order); indx(order)]';
+    locinds = repmat(locinds,nreps,1);
     
     % % % SEND THIS (locinds) TO OTHER PC VIA MSOCKET
+    %     pause(1)
+    %     mssend([ny,nx])
+    pause(1)
+    mssend(sock,locinds)
     
     nCycles = 1;
     numFrames=ceil(nCycles*frameRate/tFreq);
@@ -78,9 +94,9 @@ try
         end
     end
     
-    outputSingleScan(daq,[0 1 0])
-    outputSingleScan(daq,[1 1 0])
-    outputSingleScan(daq,[0 1 0])
+    %     outputSingleScan(daq,[0 1 0])
+    %     outputSingleScan(daq,[1 1 0])
+    %     outputSingleScan(daq,[0 1 0])
     
     gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
     oriIndex = 1;
@@ -106,13 +122,15 @@ try
     outputSingleScan(daq,[0 1 0])
     outputSingleScan(daq,[1 1 0])
     outputSingleScan(daq,[0 1 0])
-    
+%     pause(0.5)
+%     outputSingleScan(daq,[0 1 0])
+%     outputSingleScan(daq,[1 1 0])
+%     outputSingleScan(daq,[0 1 0])
     %     numlocs = 5;
     
     % Exit the demo as soon as the user presses a mouse button.
     for i=1:numel(order)
         % ------ Bookkeeping Variables ------
-        
         gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
         gratingFrameIndex = 1; % Which frame of the animation should we show?
         oriIndex = indo(order(i));
@@ -121,9 +139,6 @@ try
         Screen('DrawText', window, 'Click to exit', 0, 0, screenInfo.blI);
         mY = locs(indy(order(i)),indx(order(i)),1);
         mX = locs(indy(order(i)),indx(order(i)),2);
-        outputSingleScan(daq,[0 1 0])
-        outputSingleScan(daq,[1 1 0])
-        outputSingleScan(daq,[0 1 0])
         % Draw the sprite at the new location.
         while gratingFrameIndex < (ratio+1)*numFrames
             Screen('DrawTexture', window, gratingFrame(gratingFrameIndex,oriIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
@@ -133,6 +148,9 @@ try
             Screen('Flip', window);
             gratingFrameIndex = gratingFrameIndex + 1;
         end
+        outputSingleScan(daq,[0 1 0])
+        outputSingleScan(daq,[1 1 0])
+        outputSingleScan(daq,[0 1 0])
     end
     
     for i=1:10
@@ -140,13 +158,13 @@ try
         outputSingleScan(daq,[1 1 0])
         outputSingleScan(daq,[0 1 0])
     end
-    
+    msclose(sock);
     
     % Revive the mouse cursor.
     ShowCursor;
     PixperDeg = screenInfo.PixperDeg;
-    xpos = round((mX-xRes/2)/PixperDeg)
-    ypos = round((yRes/2-mY)/PixperDeg)
+    xpos = round((locs(:,:,2)-xRes/2)/PixperDeg)
+    ypos = round((yRes/2-locs(:,:,1))/PixperDeg)
     
     % Close screen
     Screen('CloseAll');
@@ -170,5 +188,5 @@ catch
         outputSingleScan(daq,[1 1 0])
         outputSingleScan(daq,[0 1 0])
     end
-    
+    msclose(sock);
 end
