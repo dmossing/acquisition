@@ -1,0 +1,1 @@
+This is a git repo for a software package to circle regions of interest (ROIs) in calcium imaging data and extract their signals. This code is available for all to use through github but will not be supported.
