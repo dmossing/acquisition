@@ -22,7 +22,7 @@ AT_CheckWarning(rc);
 AT_CheckWarning(rc);
 [rc,stride] = AT_GetInt(hndl,'AOIStride'); 
 AT_CheckWarning(rc);
-warndlg('To Abort the acquisition close the image display.','Starting Acquisition')    
+% warndlg('To Abort the acquisition close the image display.','Starting Acquisition')    
 disp('Starting acquisition...');
 [rc] = AT_Command(hndl,'AcquisitionStart');
 AT_CheckWarning(rc);

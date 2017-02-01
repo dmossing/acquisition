@@ -24,8 +24,12 @@ AT_CheckWarning(rc);
 AT_CheckWarning(rc);
 [rc,stride] = AT_GetInt(hndl,'AOIStride');
 AT_CheckWarning(rc);
+
+% msocket connection to visual stim PC
+server = '128.32.173.24';
 moveon = false;
 old_stimct = 0;
+disp('waiting on TTL')
 while(~moveon)
     stimct = labjack_get_ctr(lj_obj,lj_h);
     if stimct > old_stimct
@@ -33,6 +37,16 @@ while(~moveon)
         moveon = true;
     end
 end
+disp('received TTL')
+sock = msconnect(server,3000);
+% ns = msrecv(sock);
+% ns
+% disp('received size')
+% ny = ns(1); nx = ns(2);
+locinds = msrecv(sock);
+ns = max(locinds);
+ny = ns(1); nx = ns(2);
+disp('received locinds')
 % warndlg('To Abort the acquisition close the image display twice.','Starting Acquisition')
 disp('Starting baseline acquisition...');
 [rc] = AT_Command(hndl,'AcquisitionStart');
@@ -66,10 +80,11 @@ avg = avg/ct;
 avg_filt = imgaussfilt(avg,100);
 disp('Starting dfof acquisition...');
 h=imagesc(buf2,[0 1]);
-sofar = zeros(width,height);
+dfof_ret = zeros(width,height,ny,nx);
 moveon = false;
 ct = 0;
-while(~moveon)
+while(ct<size(locinds,1))
+    stimy = locinds(ct+1,1); stimx = locinds(ct+1,2);
     [rc] = AT_QueueBuffer(hndl,imagesize);
     AT_CheckWarning(rc);
     [rc] = AT_Command(hndl,'SoftwareTrigger');
@@ -81,18 +96,19 @@ while(~moveon)
     dfof = (double(buf2) - avg)./avg_filt;
     set(h,'CData',dfof);
     drawnow;
-    sofar = sofar+dfof;
+    dfof_ret(:,:,stimy,stimx) = dfof_ret(:,:,stimy,stimx)+dfof;
     stimct = labjack_get_ctr(lj_obj,lj_h);
-    if stimct >= old_stimct+1 && stimct < old_stimct+5
+    if stimct > old_stimct && stimct < old_stimct+5
         old_stimct = stimct;
         ct = ct+1;
-        im{ct} = sofar;
-        sofar = zeros(width,height);
-        figure(ct+1)
-        imagesc(im{ct})
-        figure(1)
+%         im{ct} = sofar;
+%         sofar = zeros(width,height);
+        figure(2)
+        subplot(ny,nx,nx*(stimy-1)+stimx)
+        imagesc(dfof_ret(:,:,stimy,stimx))
     elseif stimct >= old_stimct+5
         old_stimct = stimct;
+        ct = ct+1;
         moveon = true;
     end
 end
@@ -106,4 +122,5 @@ AT_CheckWarning(rc);
 AT_CheckWarning(rc);
 [rc] = AT_FinaliseLibrary();
 AT_CheckWarning(rc);
+msclose(sock);
 disp('Camera shutdown');
