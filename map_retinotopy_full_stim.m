@@ -37,7 +37,7 @@ srvsock = mslisten(3000);
 outputSingleScan(daq,[0 0 0]);
 outputSingleScan(daq,[1 0 0]);
 outputSingleScan(daq,[0 0 0]);
-pause(1)
+pause(3)
 % assume the other PC has responded by requesting a connection by this
 % point
 sock = msaccept(srvsock);
