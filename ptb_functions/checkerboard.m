@@ -9,6 +9,8 @@ end
     
 
 try
+    d = standard_daq(1);
+    outputSingleScan(d,[0]);
     myScreen = max(Screen('Screens'));
     [win,winRect] = Screen(myScreen,'OpenWindow');
     
@@ -68,6 +70,9 @@ try
     % param 2 denotes "dont clear buffer on flip", i.e., we alternate
     % our buffers cum textures
     while (~KbCheck) && (GetSecs < deadline)
+        outputSingleScan(d,[0]) 
+        outputSingleScan(d,[1])
+        outputSingleScan(d,[0])
         [VBLTimestamp StimulusOnseTime] = Screen('Flip', win, VBLTimestamp + swapinterval,2);
     end
     
