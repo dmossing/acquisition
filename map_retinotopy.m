@@ -26,7 +26,7 @@ AT_CheckWarning(rc);
 AT_CheckWarning(rc);
 
 % msocket connection to visual stim PC
-server = '128.32.173.24';
+server = '128.32.173.6';
 moveon = false;
 old_stimct = 0;
 disp('waiting on TTL')
