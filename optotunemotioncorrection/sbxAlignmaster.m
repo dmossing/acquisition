@@ -1,12 +1,12 @@
-function sbxAlignmaster(fname,Depth,rect)
+function rect = sbxAlignmaster(fname,Depth,rect)
 
     global info
     
     if ~exist('rect','var') || isempty(rect)
-        rect = false;
+        rect = [];
     end
     if isequal(rect,true)
-        [~, ~, rect] = crop(sbxreadpacked(fname,0,1), rect);
+        [~, ~, rect] = crop(sbxreadpacked(fname,1,1), rect);
         rect = round([rect(3),rect(3)+rect(4),rect(1),rect(1)+rect(2)]);
     end
 
@@ -155,7 +155,7 @@ function sbxAlignmaster(fname,Depth,rect)
     g = exp(-(-5:5).^2/2/1.6^2);
 
     tic;
-
+mask = zeros(szz);
     parfor jj = 1:numFrames
 
         z = single(sbxreadpacked(fname,Frames(1,jj)-1,1));
