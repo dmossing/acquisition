@@ -365,8 +365,8 @@ dim = handles.dim;
 %         vert{ii} = [];
 %     end
 % end
-
-save([strtok(handles.fn,'.') '.segment'],'mask','dim','-mat','-v7.3');
+% a .align file name has 6 chars after the filename base
+save([handles.fn(1:end-6) '.segment'],'mask','dim','-mat','-v7.3');
 fprintf('Saved segments\n');
 
 

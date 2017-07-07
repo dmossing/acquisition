@@ -30,10 +30,11 @@ gd.dim = size(gd.Images);
 
 % Determine color limits
 if ~exist('CLim', 'var') || isempty(CLim)
-%     gd.CLim = prctile(Images(linspace(1,numel(Images),512*796*100)), [1,99]);
+    gd.CLim = prctile(Images(linspace(1,numel(Images),512*796*100)), [1,99]);
     gd.CLimits = [min(gd.Images(:)), max(gd.Images(:))];
 else
     gd.CLim = CLim;
+    gd.CLimits = [min(gd.Images(:)), max(gd.Images(:))];
 end
 
 % Determine color map
