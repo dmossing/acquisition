@@ -193,7 +193,7 @@ if strcmp(ScreenType,'projector')
 else
     xRes = 1280; yRes = 1024;
 end
-% dos(['C:\Users\Resonant-2\Downloads\nircmd-x64\nircmd.exe setdisplay ' num2str(xRes) ' ' num2str(yRes) ' 32']);
+% dos(['C:/Users/Resonant-2/Downloads/nircmd-x64/nircmd.exe setdisplay ' num2str(xRes) ' ' num2str(yRes) ' 32']);
 
 VertScreenDimDeg = atand(VertScreenSize/DScreen); % in visual degrees
 PixperDeg = yRes/VertScreenDimDeg;
@@ -209,10 +209,10 @@ if ~isempty(find(x0<1)) | ~isempty(find(y0<1))
 end
 
 % do stimulus data file management
-% stimfolder = 'C:\Users\Resonant-2\Documents\Dan\StimData\';
-stimfolder = '\\adesnik2.ist.berkeley.edu\mossing\LF2P\StimData\';
+% stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
+stimfolder = 'smb://adesnik2.ist.berkeley.edu/mossing/LF2P/StimData/';
 dstr = yymmdd(date);
-resDir = [stimfolder dstr '\' result.animalid '\LF2P\'];
+resDir = [stimfolder dstr '/' result.animalid '/LF2P/'];
 if ~exist(resDir,'dir')
     mkdir(resDir)
 end
@@ -293,10 +293,14 @@ fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
 
 % set up DAQ
 
-daq=daq.createSession('ni');
-addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
-addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
-addDigitalChannel(daq,'Dev3','port0/line2','OutputOnly'); % complete stim protocol, move in z
+% daq=daq.createSession('ni');
+% addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
+% addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
+% addDigitalChannel(daq,'Dev3','port0/line2','OutputOnly'); % complete stim protocol, move in z
+% ard = arduino();
+% configurePin(ard,'D2','DigitalOutput');
+d = DaqFind;
+err = DaqDConfigPort(d,0,0);
 
 AssertOpenGL;
 
@@ -338,7 +342,7 @@ if kinp == 'q'|kinp == 'Q',
     Screen('CloseAll');
     Priority(0);
 else
-    outputSingleScan(daq,[0 1 0]);
+%     outputSingleScan(daq,[0 1 0]);
     % start imaging
     if strcmp(modality,'2p')
         fprintf(H_Scanbox,'G'); %go
@@ -476,9 +480,15 @@ else
                 
                 % send stim on trigger
                 %             playtone(ori_tones(cnum),stimduration);
-                outputSingleScan(daq,[0 1 0])
-                outputSingleScan(daq,[1 1 0])
-                outputSingleScan(daq,[0 1 0])
+%                 outputSingleScan(daq,[0 1 0])
+%                 outputSingleScan(daq,[1 1 0])
+%                 outputSingleScan(daq,[0 1 0])
+%                 writeDigitalPin(ard,'D2',0)
+%                 writeDigitalPin(ard,'D2',1)
+%                 writeDigitalPin(ard,'D2',0)
+                DaqDOut(d,0,0); 
+                DaqDOut(d,0,255); 
+                DaqDOut(d,0,0);
                 disp('stim on')
                 tic
                 % show stimulus
@@ -489,9 +499,15 @@ else
                 %                 fprintf(H_Run,'')
                 toc
                 
-                outputSingleScan(daq,[0 1 0])
-                outputSingleScan(daq,[1 1 0])
-                outputSingleScan(daq,[0 1 0])
+%                 outputSingleScan(daq,[0 1 0])
+%                 outputSingleScan(daq,[1 1 0])
+%                 outputSingleScan(daq,[0 1 0])
+%                 writeDigitalPin(ard,'D2',0)
+%                 writeDigitalPin(ard,'D2',1)
+%                 writeDigitalPin(ard,'D2',0)
+                DaqDOut(d,0,0); 
+                DaqDOut(d,0,255); 
+                DaqDOut(d,0,0);
                 disp('stim off')
                 
                 
@@ -507,9 +523,9 @@ else
                 end
             end
         end
-        outputSingleScan(daq,[0 1 0])
-        outputSingleScan(daq,[0 1 1])
-        outputSingleScan(daq,[0 1 0])
+%         outputSingleScan(daq,[0 1 0])
+%         outputSingleScan(daq,[0 1 1])
+%         outputSingleScan(daq,[0 1 0])
     end
     
     %     result.stimulusIndex  =  Condnum;
@@ -537,7 +553,8 @@ else
     Priority(0);
     
     
-    outputSingleScan(daq,[0 0 0])
+%     outputSingleScan(daq,[0 0 0])
+%     clear ard;
 end
 
 % % stop imaging

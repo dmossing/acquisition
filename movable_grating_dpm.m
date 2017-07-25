@@ -29,7 +29,7 @@ else
     xRes = 1280; yRes = 1024;
     VertCRTSize = 27;
 end
-dos(['C:\Users\Resonant-2\Downloads\nir cmd-x64\nircmd.exe setdisplay ' num2str(xRes) ' ' num2str(yRes) ' 32']);
+% dos(['C:\Users\Resonant-2\Downloads\nir cmd-x64\nircmd.exe setdisplay ' num2str(xRes) ' ' num2str(yRes) ' 32']);
 xovy = xRes/yRes;
 % DScreen=15;         % cm
 % VertCRTSize=15;   % cm
@@ -150,4 +150,4 @@ catch
     psychrethrow(psychlasterror);
     
 end
-dos('C:\Users\Resonant-2\Downloads\nircmd-x64\nircmd.exe setdisplay 1920 1080 32');
+% dos('C:\Users\Resonant-2\Downloads\nircmd-x64\nircmd.exe setdisplay 1920 1080 32');

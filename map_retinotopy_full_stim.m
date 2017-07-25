@@ -25,18 +25,23 @@ end
 
 % set up DAQ
 
-daq=daq.createSession('ni');
-addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
-addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
-addDigitalChannel(daq,'Dev3','port0/line2','OutputOnly'); % complete stim protocol, move in z
+% daq=daq.createSession('ni');
+% addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
+% addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
+% addDigitalChannel(daq,'Dev3','port0/line2','OutputOnly'); % complete stim protocol, move in z
+d = DaqFind;
+err = DaqDConfigPort(d,0,0);
 
 % set up msocket
 
 srvsock = mslisten(3000);
 % tell the other PC to open up a socket
-outputSingleScan(daq,[0 0 0]);
-outputSingleScan(daq,[1 0 0]);
-outputSingleScan(daq,[0 0 0]);
+% outputSingleScan(daq,[0 0 0]);
+% outputSingleScan(daq,[1 0 0]);
+% outputSingleScan(daq,[0 0 0]);
+DaqDOut(d,0,0);
+DaqDOut(d,0,255);
+DaqDOut(d,0,0);
 pause(3)
 % assume the other PC has responded by requesting a connection by this
 % point
@@ -118,14 +123,16 @@ try
             oriIndex = oriIndex + 1;
         end
     end
-    
-    outputSingleScan(daq,[0 1 0])
-    outputSingleScan(daq,[1 1 0])
-    outputSingleScan(daq,[0 1 0])
-%     pause(0.5)
-%     outputSingleScan(daq,[0 1 0])
-%     outputSingleScan(daq,[1 1 0])
-%     outputSingleScan(daq,[0 1 0])
+    DaqDOut(d,0,0);
+    DaqDOut(d,0,255);
+    DaqDOut(d,0,0);
+    %     outputSingleScan(daq,[0 1 0])
+    %     outputSingleScan(daq,[1 1 0])
+    %     outputSingleScan(daq,[0 1 0])
+    %     pause(0.5)
+    %     outputSingleScan(daq,[0 1 0])
+    %     outputSingleScan(daq,[1 1 0])
+    %     outputSingleScan(daq,[0 1 0])
     %     numlocs = 5;
     
     % Exit the demo as soon as the user presses a mouse button.
@@ -148,15 +155,21 @@ try
             Screen('Flip', window);
             gratingFrameIndex = gratingFrameIndex + 1;
         end
-        outputSingleScan(daq,[0 1 0])
-        outputSingleScan(daq,[1 1 0])
-        outputSingleScan(daq,[0 1 0])
+        %         outputSingleScan(daq,[0 1 0])
+        %         outputSingleScan(daq,[1 1 0])
+        %         outputSingleScan(daq,[0 1 0])
+        DaqDOut(d,0,0);
+        DaqDOut(d,0,255);
+        DaqDOut(d,0,0);
     end
     
     for i=1:10
-        outputSingleScan(daq,[0 1 0])
-        outputSingleScan(daq,[1 1 0])
-        outputSingleScan(daq,[0 1 0])
+        %         outputSingleScan(daq,[0 1 0])
+        %         outputSingleScan(daq,[1 1 0])
+        %         outputSingleScan(daq,[0 1 0])
+        DaqDOut(d,0,0);
+        DaqDOut(d,0,255);
+        DaqDOut(d,0,0);
     end
     msclose(sock);
     
@@ -184,9 +197,12 @@ catch
     psychrethrow(psychlasterror);
     
     for i=1:10
-        outputSingleScan(daq,[0 1 0])
-        outputSingleScan(daq,[1 1 0])
-        outputSingleScan(daq,[0 1 0])
+        %         outputSingleScan(daq,[0 1 0])
+        %         outputSingleScan(daq,[1 1 0])
+        %         outputSingleScan(daq,[0 1 0])
+        DaqDOut(d,0,0);
+        DaqDOut(d,0,255);
+        DaqDOut(d,0,0);
     end
     msclose(sock);
 end
