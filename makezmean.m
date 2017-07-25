@@ -1,5 +1,4 @@
 function zmean = makezmean(fname,zno,framesperz)
-
 try
     % single channel case
     ex = load2P(fname,'frames',1);
