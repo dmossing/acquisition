@@ -1,8 +1,8 @@
-function tex = gen_gratings(wininfo,thisstim)
-gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
-Bcol = 128; % Background 0 black, 255 white
-method = 'symmetric';
-gtype = 'box';
+function tex = gen_gratings(wininfo,gratingInfo,thisstim)
+gf = gratingInfo.gf;%.Gaussian width factor 5: reveal all .5 normal fall off
+Bcol = gratingInfo.Bcol; % Background 0 black, 255 white
+method = gratingInfo.method;
+gtype = gratingInfo.gtype;
 % gtype = 'sine';
 
 xRes = wininfo.xRes;
@@ -51,7 +51,7 @@ for i=1:numFrames
     
     T = bg;
     T(y0:y0+size(G,2)-1,x0:x0+size(G,2)-1) = G;
-    tex(i) = Screen('MakeTexture', w, T);
+    thisstim.tex(i) = Screen('MakeTexture', w, T);
 end
 end
 
