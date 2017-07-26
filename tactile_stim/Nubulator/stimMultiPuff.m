@@ -1368,7 +1368,7 @@ end
                 CurrentTriggers(:,pc) = PistonTrigger(:,pc);
 %                 CurrentTriggers(:,pc) = repmat(PistonTrigger, 1, sum(pc));
 %                 CurrentTriggers(
-            end
+            end.
             
             % Queue triggers & update buffer
             if ~MaxRandomScans                                          % do not add random ITI
