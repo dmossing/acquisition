@@ -7,6 +7,9 @@ else
     signo = 1;
     data = data(:)';
 end
+if min(size(frm))==1
+    frm = reshape(frm,2,[])';
+end
 stimlen = min(diff(frm,1,2));
 tracelen = stimlen+extra_before+extra_after;
 trialno = size(frm,1);
