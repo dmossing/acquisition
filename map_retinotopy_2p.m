@@ -64,9 +64,15 @@ while(true)
         mchA = double(intmax('uint16')-mmfile.Data.chA);
         flag = 0;
     elseif moveon
-        N(ii,jj) = N(ii,jj)+1;
-        avg_by_loc{ii,jj} = avg_by_loc{ii,jj}*(N(ii,jj)-1)/N(ii,jj) + double(intmax('uint16')-mmfile.Data.chA)*1/N(ii,jj);
-        ih(ii,jj).CData = avg_by_loc{ii,jj};
+        try
+            [ii,jj]
+            N(ii,jj) = N(ii,jj)+1;
+            avg_by_loc{ii,jj} = avg_by_loc{ii,jj}*(N(ii,jj)-1)/N(ii,jj) + double(intmax('uint16')-mmfile.Data.chA)*1/N(ii,jj);
+            subplot(ny,nx,(ii-1)*nx+jj)
+            imagesc(avg_by_loc{ii,jj})
+%             ih(ii,jj).CData = avg_by_loc{ii,jj};
+        catch
+        end
     end
     
     mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
