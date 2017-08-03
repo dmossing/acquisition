@@ -150,4 +150,8 @@ catch
     psychrethrow(psychlasterror);
     
 end
-% dos('C:\Users\Resonant-2\Downloads\nircmd-x64\nircmd.exe setdisplay 1920 1080 32');
+% dos('C:\Users\Resonant-2\Downloads\nircmd-x64\nircmd.exe setdisplay 1920
+% 1080 32');ssca
+sca
+sca
+sca

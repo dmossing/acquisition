@@ -324,6 +324,8 @@ Screen('Preference','SkipSyncTests', 0);
 %load('GammaTable.mat'); % need to do the gamma correction!!
 %CT = (ones(3,1)*correctedTable(:,2)')'/255;
 %Screen('LoadNormalizedGammaTable',w, CT);
+load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+Screen('LoadNormalizedGammaTable',w,gammaTable2*[1 1 1]);
 
 bg = ones(yRes,xRes)*Bcol;
 BG = Screen('MakeTexture', w, bg);
@@ -415,6 +417,7 @@ else
                 numFrames = ceil(frameRate/thisspeed);
                 clear tex;
                 for i=1:numFrames
+                    tic
                     clear T G;
                     phase = (i/numFrames)*2*pi;
                     angle = thisdeg*pi/180; % 30 deg orientation.
@@ -440,6 +443,7 @@ else
                     
                     T = bg;
                     T(y0(ii):y0(ii)+size(G,2)-1,x0(ii):x0(ii)+size(G,2)-1) = G;
+                    toc
                     tex(i) = Screen('MakeTexture', w, T);
                 end
                 

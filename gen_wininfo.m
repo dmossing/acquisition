@@ -22,6 +22,7 @@ wininfo.xposStim = xposStim;
 wininfo.yposStim = yposStim;
 wininfo.frameRate = frameRate;
 wininfo.Bcol = Bcol;
+wininfo.screenNumber = screenNumber;
 
 bg = ones(yRes,xRes)*Bcol;
 wininfo.BG = Screen('MakeTexture', wininfo.w, bg);

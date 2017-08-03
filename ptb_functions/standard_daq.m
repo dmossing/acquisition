@@ -2,7 +2,7 @@ function d = standard_daq(n)
 % set up DAQ
 % up to 3 channels: first is stim trigger, second is complete stim protocol/move in z, third is projector LED on 
 
-if ~exists('n','var') || isempty(n)
+if ~exist('n','var') || isempty(n)
     n = 1;
 end
 
