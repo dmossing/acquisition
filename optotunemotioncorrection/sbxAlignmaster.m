@@ -7,7 +7,18 @@ function rect = sbxAlignmaster(fname,Depth,rect)
     end
     if isequal(rect,true)
         [~, ~, rect] = crop(sbxreadpacked(fname,1,1), rect);
-        rect = round([rect(3),rect(3)+rect(4),rect(1),rect(1)+rect(2)]);
+%         rect = round([rect(3),rect(3)+rect(4),rect(1),rect(1)+rect(2)]);
+            rect = [rect(2),rect(2)+rect(4),rect(1),rect(1)+rect(3)];
+            rect(1) = max(rect(1),1);
+            rect(3) = max(rect(3),1);
+            rect(2) = min(rect(2),info.sz(1));
+            rect(4) = min(rect(4),info.sz(2));
+            if ~mod(rect(2)-rect(1),2)
+                rect(2) = rect(2)-1;
+            end
+            if ~mod(rect(4)-rect(3),2)
+                rect(4) = rect(4)-1;
+            end
     end
 
     fprintf('Starting sbxAlignmaster: %s\n',[fname,'.sbx']);
@@ -108,7 +119,7 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     
 
-    for nn = 1:10
+    for nn = 1:2 %10
 
         fprintf('Refining alignment... pass %d\n',nn);
 
@@ -156,7 +167,7 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     tic;
 mask = zeros(szz);
-    parfor jj = 1:numFrames
+    for jj = 1:numFrames
 
         z = single(sbxreadpacked(fname,Frames(1,jj)-1,1));
         if ~isempty(rect) %Evan
