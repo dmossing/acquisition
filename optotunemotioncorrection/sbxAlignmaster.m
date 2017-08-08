@@ -119,7 +119,7 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     
 
-    for nn = 1:2 %10
+    for nn = 1:10
 
         fprintf('Refining alignment... pass %d\n',nn);
 
@@ -167,7 +167,7 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     tic;
 mask = zeros(szz);
-    for jj = 1:numFrames
+    parfor jj = 1:numFrames
 
         z = single(sbxreadpacked(fname,Frames(1,jj)-1,1));
         if ~isempty(rect) %Evan
