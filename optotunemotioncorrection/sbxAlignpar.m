@@ -42,8 +42,10 @@ function [m,v,T] = sbxAlignpar(fname,thestd,gl,l,Frames,numDepths,rect)
     end
     
     
+    size(thestd)
 
     thestd = thestd(rg1,rg2);
+
 
     
 

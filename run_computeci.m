@@ -1,4 +1,4 @@
-function run_alignment(foldname,lookfor)
+function run_computeci(foldname,lookfor)
     if ~exist(lookfor,'var') || isempty(lookfor)
         lookfor = '';
     end
@@ -12,8 +12,6 @@ function run_alignment(foldname,lookfor)
         %if info.scanmode==0
         %    info.recordsPerBuffer = info.recordsPerBuffer*2;
         %end
-        %which sbxAlignmaster
-        %sbxAlignmaster([foldname '/' filebase],[],info.rect);
         which sbxComputeci
         sbxComputeci([foldname '/' filebase],[],info.rect);
     end

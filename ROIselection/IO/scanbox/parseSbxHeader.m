@@ -51,7 +51,11 @@ load(ConfigFile, 'info');
 config.header = {info};
 
 % Save frame dimensions
-config.Height = info.recordsPerBuffer;
+if info.scanmode
+    config.Height = info.recordsPerBuffer;
+else
+    config.Height = 2*info.recordsPerBuffer;
+end
 if isfield(info,'scanbox_version') && info.scanbox_version >= 2
     try
         config.Width = info.sz(2);

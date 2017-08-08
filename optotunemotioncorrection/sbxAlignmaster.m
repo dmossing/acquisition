@@ -21,6 +21,12 @@ function rect = sbxAlignmaster(fname,Depth,rect)
             end
     end
 
+%    if info.recordsPerBuffer < info.sz(1)
+%        info.recordsPerBuffer = info.sz(1);
+%    end
+
+    z = sbxreadpacked(fname,0,1);
+
     fprintf('Starting sbxAlignmaster: %s\n',[fname,'.sbx']);
 
     %% Edit to load and analyze single depth
@@ -69,8 +75,10 @@ function rect = sbxAlignmaster(fname,Depth,rect)
     
 
     parfor jj = 1:numFrames
+        
 
         z = double(sbxreadpacked(fname,Frames(1,jj)-1,1));
+        size(z)
 
 
         ms = ms + z(:)*X(jj,:);
@@ -79,7 +87,8 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     end
 
-    
+    size(vs)
+    size(ms)
 
     s = reshape(sqrt(1/numFrames*(vs - sum(ms.^2,2))),szz);
     s = real(s); % occurs when constant 0 is acquired at some pixel on the frame; imaginary number caused by sqrt of negative number above (added by Evan)
@@ -350,7 +359,7 @@ mask = zeros(szz);
 
     tic;
 
-    sbxComputeci(fname,Depth); %Takes about 10 minutes, eats up a ton of RAM
+    sbxComputeci(fname,Depth,rect); %Takes about 10 minutes, eats up a ton of RAM
 
     toc;
 
