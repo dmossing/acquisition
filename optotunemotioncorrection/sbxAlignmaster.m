@@ -78,7 +78,6 @@ function rect = sbxAlignmaster(fname,Depth,rect)
         
 
         z = double(sbxreadpacked(fname,Frames(1,jj)-1,1));
-        size(z)
 
 
         ms = ms + z(:)*X(jj,:);
@@ -87,13 +86,21 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     end
 
-    size(vs)
-    size(ms)
-
     s = reshape(sqrt(1/numFrames*(vs - sum(ms.^2,2))),szz);
     s = real(s); % occurs when constant 0 is acquired at some pixel on the frame; imaginary number caused by sqrt of negative number above (added by Evan)
     
+    if isempty(rect)
+        rgx = (1:size(m,2))+45;
+        rgy = 32 + (1:size(m,1));
+    else
+        rgy = rect(1):rect(2);
+        rgx = rect(3):rect(4);
+        mask = false(szz);
+        mask(rgy,rgx) = true;
+    end
+    
     thestd = medfilt2(s,[31,31],'symmetric'); % 
+    thestd(~mask) = inf;
 
     
 
@@ -113,16 +120,16 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     [m,~,T] = sbxAlignpar(fname,thestd,gl,l,Frames,numDepths,rect); %Takes about 2.5 minutes
 
-
-    if isempty(rect)
-        rgx = (1:size(m,2))+45;
-        rgy = 32 + (1:size(m,1));
-    else
-        rgy = rect(1):rect(2);
-        rgx = rect(3):rect(4);
-        mask = false(szz);
-        mask(rgy,rgx) = true;
-    end
+% 
+%     if isempty(rect)
+%         rgx = (1:size(m,2))+45;
+%         rgy = 32 + (1:size(m,1));
+%     else
+%         rgy = rect(1):rect(2);
+%         rgx = rect(3):rect(4);
+%         mask = false(szz);
+%         mask(rgy,rgx) = true;
+%     end
 
     T0 = T;
 
@@ -175,8 +182,8 @@ function rect = sbxAlignmaster(fname,Depth,rect)
     g = exp(-(-5:5).^2/2/1.6^2);
 
     tic;
-mask = zeros(szz);
-    parfor jj = 1:numFrames
+% mask = zeros(szz);
+    for jj = 1:numFrames
 
         z = single(sbxreadpacked(fname,Frames(1,jj)-1,1));
         if ~isempty(rect) %Evan

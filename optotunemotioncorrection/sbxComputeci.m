@@ -33,14 +33,16 @@ function [] = sbxComputeci(fname,Depth,rect)
     if ~isempty(rect)
 %        rect([1,2]) = floor(rect([1,2]));
 %        rect([3,4]) = ceil(rect([3,4]));
-%        mask = true(size(A));
+        mask = false(size(squeeze(A)));
 %        mask(rect(2)+1:rect(2)+rect(4), rect(1)+1:rect(1)+rect(3)) = false;
         rg1 = rect(1):rect(2);
         rg2 = rect(3):rect(4);
+        mask(rg1,rg2) = true;
+        
     else
-        %mask = true(size(A));
-        rg1 = 1:size(A,1);
-        rg2 = 1:size(A,2);
+        mask = true(size(squeeze(A)));
+%         rg1 = 1:size(A,1);
+%         rg2 = 1:size(A,2);
     end
 %     N = min(size(A))-20;    % leave margin
 %     if rem(N,2)
@@ -68,8 +70,8 @@ function [] = sbxComputeci(fname,Depth,rect)
 
     
 
-    %imsize = [info.recordsPerBuffer,796];   % size(info.S,2)
-    imsize = [numel(rg1) numel(rg2)];
+    imsize = [info.recordsPerBuffer,796];   % size(info.S,2)
+%     imsize = [numel(rg1) numel(rg2)];
 
     nframes = numel(Frames);
 
@@ -103,8 +105,8 @@ function [] = sbxComputeci(fname,Depth,rect)
 
         rg = floor((ii-1)*nframes/nblocks)+1:floor(ii*nframes/nblocks);
 
-        %[c(:,:,:,ii),xray(:,:,:,:,ii)] = doOneBlock(fname,imsize,res,winsize,T,Q,s,nframes,rg,thestd,Frames,mask);
-        [c(:,:,:,ii),xray(:,:,:,:,ii)] = doOneBlock(fname,imsize,res,winsize,T,Q,s,nframes,rg,thestd,Frames,rg1,rg2);
+        [c(:,:,:,ii),xray(:,:,:,:,ii)] = doOneBlock(fname,imsize,res,winsize,T,Q,s,nframes,rg,thestd,Frames,mask);
+%         [c(:,:,:,ii),xray(:,:,:,:,ii)] = doOneBlock(fname,imsize,res,winsize,T,Q,s,nframes,rg,thestd,Frames,rg1,rg2);
 
     end
 
@@ -150,7 +152,7 @@ function [c,xray] = doOneBlock(fname,imsize,res,winsize,T,Q,s,nframes,rg,thestd,
 
         A = double(sbxreadpacked(fname,Frames(nn)-1,1));
         
-        A = A(rg1,rg2)./thestd;
+        A = A.*mask./thestd;
 
         Ar = circshift(A,T(nn,:));
 
