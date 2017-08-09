@@ -12,9 +12,9 @@ function run_alignment(foldname,lookfor)
         %if info.scanmode==0
         %    info.recordsPerBuffer = info.recordsPerBuffer*2;
         %end
-        %which sbxAlignmaster
-        %sbxAlignmaster([foldname '/' filebase],[],info.rect);
-        which sbxComputeci
-        sbxComputeci([foldname '/' filebase],[],info.rect);
+        which sbxAlignmaster
+        sbxAlignmaster([foldname '/' filebase],[],info.rect);
+        %which sbxComputeci
+        %sbxComputeci([foldname '/' filebase],[],info.rect);
     end
 end
