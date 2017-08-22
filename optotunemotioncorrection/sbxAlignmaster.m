@@ -183,7 +183,7 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     tic;
 % mask = zeros(szz);
-    for jj = 1:numFrames
+    parfor jj = 1:numFrames
 
         z = single(sbxreadpacked(fname,Frames(1,jj)-1,1));
         if ~isempty(rect) %Evan

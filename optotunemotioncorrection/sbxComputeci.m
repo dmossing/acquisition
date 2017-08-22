@@ -29,7 +29,7 @@ function [] = sbxComputeci(fname,Depth,rect)
     %%
     global info
 
-    A = sbxread(fname,0,1);
+    A = sbxreadpacked(fname,0,1);
     if ~isempty(rect)
 %        rect([1,2]) = floor(rect([1,2]));
 %        rect([3,4]) = ceil(rect([3,4]));
@@ -151,7 +151,7 @@ function [c,xray] = doOneBlock(fname,imsize,res,winsize,T,Q,s,nframes,rg,thestd,
     for nn = rg
 
         A = double(sbxreadpacked(fname,Frames(nn)-1,1));
-        
+         
         A = A.*mask./thestd;
 
         Ar = circshift(A,T(nn,:));
