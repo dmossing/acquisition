@@ -1,6 +1,9 @@
 function save_crop_for_alignment(fns)
 for i=1:numel(fns)
     fname = fns{i};
+	if fname(end-3:end) == '.sbx'
+		fname = fname(1:end-4);
+	end
     load([fname '.mat'])
     [~, ~, rect] = crop(sbxreadpacked(fname,1,1), true);
     %         rect = round([rect(3),rect(3)+rect(4),rect(1),rect(1)+rect(2)]);
