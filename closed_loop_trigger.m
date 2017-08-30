@@ -24,7 +24,7 @@ dsesh.outputSingleScan([1])
 % wait to hear desired number of triggers
 triginfo_recvd = false;
 while ~triginfo_recvd
-
+    
     while(mmfile.Data.header(1)<0) % wait for a new frame...
         if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
             dsesh.outputSingleScan([0])
@@ -85,10 +85,18 @@ end
 
 % select ROI
 imagesc(accumulated);
-obj = imfreehand;
-pos = obj.getPosition;
-msk = poly2mask(pos(:,1),pos(:,2),size(mchA,1),size(mchA,2));
-
+msk = zeros(size(mchA));
+goon = false; % show finished selecting ROIs by hitting RETURN
+while ~goon
+    obj = imfreehand;
+    pos = obj.getPosition;
+    msk = msk | poly2mask(pos(:,1),pos(:,2),size(mchA,1),size(mchA,2));
+    pause;
+    currkey = get(gcf,'CurrentKey');
+    if strcmp(currkey,'return')
+        goon = true;
+    end
+end
 % acquire baseline data
 ctr = 0;
 frames_to_baseline = 500;
@@ -119,11 +127,6 @@ while ctr < frames_to_baseline
     ctr = ctr+1;
 end
 
-threshhi = 0.9;
-fcutoffhi = prctile(baseline_trace,100*threshhi);
-threshlo = 0.7;
-fcutofflo = prctile(baseline_trace,100*threshlo);
-
 % trigger on that ROI lighting up
 
 trigctr = 0;
@@ -132,6 +135,8 @@ deadframes = 50;
 silentframes = 50;
 fbuffer = baseline_trace;
 first = true;
+updateevery = 500;
+updatectr = 0;
 while trigctr < trigno
     sincelasttrigger = 0;
     % deliver a stim when the neuron is active
@@ -141,6 +146,13 @@ while trigctr < trigno
                 return;
             end
         end
+        if rem(updatectr,updateevery)==0
+            threshhi = 0.9;
+            fcutoffhi = prctile(fbuffer,100*threshhi);
+            threshlo = 0.6;
+            fcutofflo = prctile(fbuffer,100*threshlo);
+        end
+        updatectr = updatectr+1;
         
         %         display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
         
@@ -177,7 +189,7 @@ while trigctr < trigno
             end
         end
         handshook = mmfile.Data.header(4);
-        mmfile.Data.header(1) = -1; 
+        mmfile.Data.header(1) = -1;
     end
     dsesh.outputSingleScan([0])
     sincelastresponse = 0;
@@ -191,6 +203,13 @@ while trigctr < trigno
                 return;
             end
         end
+        if rem(updatectr,updateevery)==0
+            threshhi = 0.9;
+            fcutoffhi = prctile(fbuffer,100*threshhi);
+            threshlo = 0.6;
+            fcutofflo = prctile(fbuffer,100*threshlo);
+        end
+        updatectr = updatectr+1;
         
         %         display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
         
@@ -227,7 +246,7 @@ while trigctr < trigno
             end
         end
         handshook = mmfile.Data.header(4);
-        mmfile.Data.header(1) = -1; 
+        mmfile.Data.header(1) = -1;
     end
     dsesh.outputSingleScan([0])
     sincelasttrigger = 0;
@@ -235,12 +254,12 @@ while trigctr < trigno
 end
 
 while true
-        while(mmfile.Data.header(1)<0) % wait for a new frame...
-            if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-                dsesh.outputSingleScan([0])
-                return;
-            end
+    while(mmfile.Data.header(1)<0) % wait for a new frame...
+        if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+            dsesh.outputSingleScan([0])
+            return;
         end
+    end
 end
 
 clear mmfile; % close the memory mapped file
