@@ -1,5 +1,5 @@
 function run_alignment(foldname,lookfor)
-    if ~exist(lookfor,'var') || isempty(lookfor)
+    if ~exist('lookfor','var') || isempty(lookfor)
         lookfor = '';
     end
     lookfor
@@ -13,7 +13,13 @@ function run_alignment(foldname,lookfor)
         %    info.recordsPerBuffer = info.recordsPerBuffer*2;
         %end
         which sbxAlignmaster
-        sbxAlignmaster([foldname '/' filebase],[],info.rect);
+        if isfield(info,'rect')
+            sbxAlignmaster([foldname '/' filebase],[],info.rect);
+        else
+            sbxAlignmaster([foldname '/' filebase]);
+            which sbxComputeci
+        	sbxComputeci([foldname '/' filebase]);
+        end
         %which sbxComputeci
         %sbxComputeci([foldname '/' filebase],[],info.rect);
     end

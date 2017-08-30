@@ -90,8 +90,10 @@ function rect = sbxAlignmaster(fname,Depth,rect)
     s = real(s); % occurs when constant 0 is acquired at some pixel on the frame; imaginary number caused by sqrt of negative number above (added by Evan)
     
     if isempty(rect)
-        rgx = (1:size(m,2))+45;
-        rgy = 32 + (1:size(m,1));
+        rgx = (1:size(z,2)); %+45;
+        rgy = (1:size(z,1)); % 32 + 
+        mask = false(szz);
+        mask(rgy,rgx) = true;
     else
         rgy = rect(1):rect(2);
         rgx = rect(3):rect(4);
