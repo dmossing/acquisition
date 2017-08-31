@@ -4,7 +4,7 @@ fns{i} = fname;
 ROIFile = [fns{i}, '.rois'];
 ROIdata = sbxDistribute(fns{i}, 'Save'); % , 'SaveFile', ROIFile); % intialize struct
 createMasks(ROIdata, 'Save', 'SaveFile', ROIFile); % create ROI masks
-if ~strfind(fns{i},'depth')
+if isempty(strfind(fns{i},'depth'))
     config = load2PConfig([fns{i}, '.sbx']);
     [~, Data, Neuropil, ~] = extractSignals([fns{i},'.sbx'], ROIFile, 'all', 'Save', 'MotionCorrect', [fns{i},'.align'], 'Frames', 1:config.Frames-1); % 'SaveFile', ROIFile, 
 else
