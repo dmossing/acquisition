@@ -46,7 +46,7 @@ msclose(sock)
 
 %%
 
-frames_to_avg = 100;
+frames_to_avg = 500;
 ctr = 0;
 
 moveon = false;
@@ -132,11 +132,17 @@ end
 trigctr = 0;
 fcurrent = 0;
 deadframes = 50;
-silentframes = 50;
+silentframes = 15;
 fbuffer = baseline_trace;
 first = true;
 updateevery = 500;
 updatectr = 0;
+
+threshhi = 0.9;
+threshlo = 0.6;
+fcutoffhi = prctile(fbuffer,100*threshhi);
+fcutofflo = prctile(fbuffer,100*threshlo);
+
 while trigctr < trigno
     sincelasttrigger = 0;
     % deliver a stim when the neuron is active
@@ -147,10 +153,12 @@ while trigctr < trigno
             end
         end
         if rem(updatectr,updateevery)==0
-            threshhi = 0.9;
-            fcutoffhi = prctile(fbuffer,100*threshhi);
-            threshlo = 0.6;
-            fcutofflo = prctile(fbuffer,100*threshlo);
+            if first
+                first = false;
+            else
+                fcutoffhi = prctile(fbuffer,100*threshhi);
+                fcutofflo = prctile(fbuffer,100*threshlo);
+            end
         end
         updatectr = updatectr+1;
         
@@ -204,9 +212,7 @@ while trigctr < trigno
             end
         end
         if rem(updatectr,updateevery)==0
-            threshhi = 0.9;
             fcutoffhi = prctile(fbuffer,100*threshhi);
-            threshlo = 0.6;
             fcutofflo = prctile(fbuffer,100*threshlo);
         end
         updatectr = updatectr+1;
