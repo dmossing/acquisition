@@ -182,10 +182,17 @@ else
     end
 end
 
+roibds = cell(numToTrigOn,1);
+for roino=1:numToTrigOn
+    roibds{roino} = bwboundaries(msk(:,:,roino));
+    roibds{roino} = cell2mat(roibds{roino});
+end
+
 % acquire baseline data
 ctr = 0;
 frames_to_baseline = 500;
-baseline_trace = nan(frames_to_baseline,1);
+baseline_trace = nan(frames_to_baseline,numToTrigOn);
+dots = {'m.','g.','o.'};
 while ctr < frames_to_baseline
     
     while(mmfile.Data.header(1)<0) % wait for a new frame...
@@ -201,8 +208,15 @@ while ctr < frames_to_baseline
     
     subplot(1,2,1)
     imagesc(mchA)
+    hold on;
+    for roino=1:numToTrigOn
+        scatter(roibds{roino}(:,1),roibds{roino}(:,2),dots{roino})
+    end
+    hold off;
     subplot(1,2,2)
-    baseline_trace(ctr+1) = sum(mchA(msk));
+    for roino = 1:numToTrigOn
+        baseline_trace(ctr+1,roino) = sum(mchA(msk(:,:,roino)));
+    end
     plot(1:frames_to_baseline,baseline_trace)
     
     mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
@@ -227,65 +241,72 @@ threshhi = 0.9;
 threshlo = 0.6;
 fcutoffhi = prctile(fbuffer,100*threshhi);
 fcutofflo = prctile(fbuffer,100*threshlo);
+fcurrent = zeros(1,numToTrigOn);
 
 while trigctr < trigno
     for roino =1:numToTrigOn
-    sincelasttrigger = 0;
-    % deliver a stim when the neuron is active
-    while fcurrent < fcutoffhi || sincelasttrigger < deadframes
-        while(mmfile.Data.header(1)<0) % wait for a new frame...
-            if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-                return;
+        sincelasttrigger = 0;
+        % deliver a stim when the neuron is active
+        while fcurrent < fcutoffhi || sincelasttrigger < deadframes
+            while(mmfile.Data.header(1)<0) % wait for a new frame...
+                if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+                    return;
+                end
             end
-        end
-        if rem(updatectr,updateevery)==0
-            if first
-                first = false;
-            else
-                fcutoffhi = prctile(fbuffer,100*threshhi);
-                fcutofflo = prctile(fbuffer,100*threshlo);
+            if rem(updatectr,updateevery)==0
+                if first
+                    first = false;
+                else
+                    fcutoffhi = prctile(fbuffer,100*threshhi);
+                    fcutofflo = prctile(fbuffer,100*threshlo);
+                end
             end
-        end
-        updatectr = updatectr+1;
-        
-        %         display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
-        
-        mchA = double(intmax('uint16')-mmfile.Data.chA);
-        fcurrent = sum(mchA(msk));
-        subplot(1,2,1)
-        imagesc(mchA)
-        hold on;
-        plot(pos(:,1),pos(:,2),'r')
-        hold off;
-        subplot(1,2,2)
-        fbuffer = [fbuffer(2:end); fcurrent];
-        plot(fbuffer)
-        hold on;
-        plot(fcutoffhi*ones(size(fbuffer)),'g')
-        plot(fcutofflo*ones(size(fbuffer)),'b')
-        hold off;
-        
-        mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
-        
-        drawnow limitrate;
-        sincelasttrigger = sincelasttrigger+1;
-    end
-    disp(num2str(trigctr))
-    % SEND TTL PULSE
-    dsesh.outputSingleScan([0])
-    dsesh.outputSingleScan([1])
-    handshook = false;
-    while ~handshook
-        while(mmfile.Data.header(1)<0) % wait for a new frame...
-            if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-                dsesh.outputSingleScan([0])
-                return;
+            updatectr = updatectr+1;
+            
+            %         display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
+            
+            mchA = double(intmax('uint16')-mmfile.Data.chA);
+            for roino=1:numToTrigOn
+                fcurrent(roino) = sum(mchA(msk(:,:,roino)));
             end
+            subplot(1,numToTrigOn,1)
+            imagesc(mchA)
+            hold on;
+            for roino=1:numToTrigOn
+                scatter(roibds{roino}(:,1),roibds{roino}(:,2),dots{roino})
+            end
+            hold off;
+            fbuffer = [fbuffer(2:end,:); fcurrent];
+            for roino=1:numToTrigOn
+                subplot(1,numToTrigOn,1+roino)
+                plot(fbuffer(:,roino))
+                hold on;
+                plot(fcutoffhi(roino)*ones(size(fbuffer,1),1),'g')
+                plot(fcutofflo(roino)*ones(size(fbuffer,1),1),'b')
+                hold off;
+            end
+            
+            mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
+            
+            drawnow limitrate;
+            sincelasttrigger = sincelasttrigger+1;
         end
-        handshook = mmfile.Data.header(4);
-        mmfile.Data.header(1) = -1;
-    end
-    dsesh.outputSingleScan([0])
+        disp(num2str(trigctr))
+        % SEND TTL PULSE
+        dsesh.outputSingleScan([0])
+        dsesh.outputSingleScan([1])
+        handshook = false;
+        while ~handshook
+            while(mmfile.Data.header(1)<0) % wait for a new frame...
+                if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+                    dsesh.outputSingleScan([0])
+                    return;
+                end
+            end
+            handshook = mmfile.Data.header(4);
+            mmfile.Data.header(1) = -1;
+        end
+        dsesh.outputSingleScan([0])
     end
     sincelastresponse = 0;
     sincelasttrigger = 0;
@@ -307,14 +328,25 @@ while trigctr < trigno
         %         display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
         
         mchA = double(intmax('uint16')-mmfile.Data.chA);
-        fcurrent = sum(mchA(msk));
-        subplot(1,2,2)
-        fbuffer = [fbuffer(2:end); fcurrent];
-        plot(fbuffer)
+        for roino=1:numToTrigOn
+            fcurrent(roino) = sum(mchA(msk(:,:,roino)));
+        end
+        subplot(1,numToTrigOn,1)
+        imagesc(mchA)
         hold on;
-        plot(fcutoffhi*ones(size(fbuffer)),'g')
-        plot(fcutofflo*ones(size(fbuffer)),'b')
+        for roino=1:numToTrigOn
+            scatter(roibds{roino}(:,1),roibds{roino}(:,2),dots{roino})
+        end
         hold off;
+        fbuffer = [fbuffer(2:end,:); fcurrent];
+        for roino=1:numToTrigOn
+            subplot(1,numToTrigOn,1+roino)
+            plot(fbuffer(:,roino))
+            hold on;
+            plot(fcutoffhi(roino)*ones(size(fbuffer,1),1),'g')
+            plot(fcutofflo(roino)*ones(size(fbuffer,1),1),'b')
+            hold off;
+        end
         
         mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
         
