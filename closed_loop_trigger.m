@@ -36,67 +36,122 @@ while ~triginfo_recvd
         disp('received TTL')
         sock = msconnect(server,3000);
         trigno = msrecv(sock);
+        showfirst = msrecv(sock);
+        numToTrigOn = msrecv(sock);
+        roifile = msrecv(sock);
         dsesh.outputSingleScan([1])
         dsesh.outputSingleScan([0])
+        msclose(sock)
     end
     mmfile.Data.header(1) = -1;
 end
 
-msclose(sock)
-
 %%
 
-frames_to_avg = 500;
+frames_to_avg = 300;
 ctr = 0;
-
-moveon = false;
 
 accumulated = zeros(512,796);
 
-while ctr < frames_to_avg
+for roino = 1:numToTrigOn
     
-    while(mmfile.Data.header(1)<0) % wait for a new frame...
-        if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-            dsesh.outputSingleScan([0])
-            return;
+    if showfirst
+        % DO TTL HANDSHAKE
+        dsesh.outputSingleScan([0])
+        dsesh.outputSingleScan([1])
+        handshook = false;
+        while ~handshook
+            while(mmfile.Data.header(1)<0) % wait for a new frame...
+                if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+                    dsesh.outputSingleScan([0])
+                    return;
+                end
+            end
+            handshook = mmfile.Data.header(4);
+            mmfile.Data.header(1) = -1;
+        end
+        
+        while (ctr < frames_to_avg) && ~show
+            
+            while(mmfile.Data.header(1)<0) % wait for a new frame...
+                if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+                    dsesh.outputSingleScan([0])
+                    return;
+                end
+            end
+            
+            display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
+            
+            if(flag) % first time? Format chA according to lines/columns in data
+                mmfile.Format = {'int16' [1 16] 'header' ; ...
+                    'uint16' double([mmfile.Data.header(2) mmfile.Data.header(3)]) 'chA'};
+                mchA = double(intmax('uint16')-mmfile.Data.chA);
+                accumulated = mchA;
+                flag = 0;
+            else
+                accumulated = accumulated + double(intmax('uint16')-mmfile.Data.chA);
+            end
+            
+            imagesc(mchA)
+            
+            mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
+            
+            drawnow limitrate;
+            
+            ctr = ctr+1;
+        end
+        
+    else
+        
+    end
+    
+    while (ctr < frames_to_avg) && ~show
+        
+        while(mmfile.Data.header(1)<0) % wait for a new frame...
+            if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+                dsesh.outputSingleScan([0])
+                return;
+            end
+        end
+        
+        display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
+        
+        if(flag) % first time? Format chA according to lines/columns in data
+            mmfile.Format = {'int16' [1 16] 'header' ; ...
+                'uint16' double([mmfile.Data.header(2) mmfile.Data.header(3)]) 'chA'};
+            mchA = double(intmax('uint16')-mmfile.Data.chA);
+            accumulated = mchA;
+            flag = 0;
+        else
+            accumulated = accumulated + double(intmax('uint16')-mmfile.Data.chA);
+        end
+        
+        imagesc(mchA)
+        
+        mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
+        
+        drawnow limitrate;
+        
+        ctr = ctr+1;
+    end
+    
+    % select ROI
+    imagesc(accumulated);
+    msk = zeros(size(mchA));
+    goon = false; % show finished selecting ROIs by hitting RETURN
+    while ~goon
+        obj = imfreehand;
+        pos = obj.getPosition;
+        msk = msk | poly2mask(pos(:,1),pos(:,2),size(mchA,1),size(mchA,2));
+        pause;
+        currkey = get(gcf,'CurrentKey');
+        if strcmp(currkey,'return')
+            goon = true;
         end
     end
     
-    display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
-    
-    if(flag) % first time? Format chA according to lines/columns in data
-        mmfile.Format = {'int16' [1 16] 'header' ; ...
-            'uint16' double([mmfile.Data.header(2) mmfile.Data.header(3)]) 'chA'};
-        mchA = double(intmax('uint16')-mmfile.Data.chA);
-        accumulated = mchA;
-        flag = 0;
-    else
-        accumulated = accumulated + double(intmax('uint16')-mmfile.Data.chA);
-    end
-    
-    imagesc(mchA)
-    
-    mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
-    
-    drawnow limitrate;
-    
-    ctr = ctr+1;
 end
 
-% select ROI
-imagesc(accumulated);
-msk = zeros(size(mchA));
-goon = false; % show finished selecting ROIs by hitting RETURN
-while ~goon
-    obj = imfreehand;
-    pos = obj.getPosition;
-    msk = msk | poly2mask(pos(:,1),pos(:,2),size(mchA,1),size(mchA,2));
-    pause;
-    currkey = get(gcf,'CurrentKey');
-    if strcmp(currkey,'return')
-        goon = true;
-    end
-end
 % acquire baseline data
 ctr = 0;
 frames_to_baseline = 500;

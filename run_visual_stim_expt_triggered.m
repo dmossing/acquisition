@@ -15,6 +15,8 @@ p.addParameter('sFreqs',0.04); % cyc/vis deg
 p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',[0 1]);
+p.addParameter('showfirst',false)
+p.addParameter('numToTrigOn',1)
 p.parse(varargin{:});
 
 % choose parameters
@@ -140,12 +142,6 @@ writeMCC(d,[]); % set all output channels to 0
 
 AssertOpenGL;
 
-% frameRate = Screen('FrameRate',screenNumber);
-% if(frameRate == 0)  %if MacOSX does not know the frame rate the 'FrameRate' will return 0.
-%     frameRate = 100;
-% end
-% result.frameRate  =  frameRate;
-
 [gratingInfo.Orientation,gratingInfo.Contrast,gratingInfo.spFreq,...
     gratingInfo.tFreq, gratingInfo.Size] = deal(zeros(1,2*allConds*result.repetitions));
 gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
@@ -156,9 +152,6 @@ width  =  PatchRadiusPix;
 gratingInfo.widthLUT = [result.sizes(:) width(:)];
 result.gratingInfo = gratingInfo;
 
-%load('GammaTable.mat'); % need to do the gamma correction!!
-%CT = (ones(3,1)*correctedTable(:,2)')'/255;
-%Screen('LoadNormalizedGammaTable',w, CT);
 load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
@@ -183,24 +176,13 @@ else
     Screen('DrawTexture',wininfo.w, wininfo.BG);
     Screen('Flip', wininfo.w);
     fprintf(H_Scanbox,'G'); %go
-%     oldCt = DaqCIn(d);
-%     newCt = oldCt;
-%     while newCt == oldCt
-%         newCt = DaqCIn(d);
-%         pause(0.001)
-%     end
-%     oldCt = newCt;
     trigLvl = 0;
-%     while trigLvl < 128
-        %trigLvl = DaqDIn(d,1);
     while trigLvl < 1
         trigLvl = readMCC(d,trigIn); % DaqDIn(d,1);
     end
     disp('received trigger')
     
     % % tell the other PC to open up a socket
-%     DaqDOut(d,0,0);
-%     DaqDOut(d,0,255);
     writeMCC(d,[]);
     writeMCC(d,trigOut2);
     srvsock = mslisten(3000);
@@ -210,17 +192,37 @@ else
     % % point
     sock = msaccept(srvsock);
     mssend(sock,2*allConds*result.repetitions)
+    mssend(sock,result.showfirst)
+    mssend(sock,result.numToTrigOn)
+    mssend(sock,sprintf('%s/%s_%s_%s_trigroi.mat', base, base, depth, fileindex));
     msclose(srvsock);
     writeMCC(d,[]);
-    %     outputSingleScan(daq,[0 1 0]);
-    % start imaging
-    % pause(5);
     
     result.starttime  =  datestr(now);
     
     t0  =  GetSecs;
     trnum = 0;
-%     oldCt = DaqCIn(d);
+    
+    if showfirst
+        gi.Size = result.sizes(1);
+        gi.tFreq = result.tFreqs(1);
+        gi.spFreq = result.sFreqs(1);
+        gi.Contrast = 1;
+        
+        for i=1:numel(result.orientations)
+            gi.Orientation = result.orientations(i);
+            thisstim = getStim(gi,1);
+            thisstim.tex = gen_gratings(wininfo,gi,thisstim);
+            awaitHandshake(d,trigIn,trigOut2); %%HANDSHAKE
+            writeMCC(d,[]);
+            writeMCC(d,trigOut2);
+            show_tex(wininfo,thisstim);
+            writeMCC(d,trigOut2);
+            writeMCC(d,[]);
+        end
+        
+        awaitHandshake(d,trigIn,trigOut2); %%HANDSHAKE
+    end
     
     % set up to show stimuli
     for itrial = 1:result.repetitions
@@ -264,17 +266,7 @@ else
             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
             
             awaitHandshake(d,trigIn,trigOut2);
-%             trig_received = false;
-%             while ~trig_received
-%                 trig_received = readMCC(d,trigIn);
-% %                 dataIn = DaqDIn(d);
-% %                 trig_received = dataIn(1)>=128;
-% %                 newCt = DaqCIn(d);
-% %                 trig_received = newCt>oldCt;
-%             end
             
-            
-%             oldCt = newCt;
             disp('delivering stim')
             result = deliver_stim(result,wininfo,thisstim,d,trigOut1);
             
@@ -339,8 +331,6 @@ msclose(sock)
             int2str(result.repetitions)], 0, 0, [255,0,0]);
         Screen('Flip', w);
         
-        %         WaitSecs(max(0, result.isi-((GetSecs-t0)-trialstart)));
-        
         Screen('DrawTexture',w,BG);
         fliptime  =  Screen('Flip', w);
         WaitSecs(max(0,prestimtimems/1000));
@@ -350,13 +340,10 @@ msclose(sock)
         fliptime  =  Screen('Flip', w);
         result.timestamp(thisstim.trnum)  =  fliptime - t0;
         
-        %             disp(['trnum: ' num2str(trnum) '   ts: ' num2str(result.timestamp(trnum))]);
+        % disp(['trnum: ' num2str(trnum) '   ts: ' num2str(result.timestamp(trnum))]);
         stimstart  =  GetSecs-t0;
         
         % send stim on trigger
-%         DaqDOut(d,0,0);
-%         DaqDOut(d,0,255);
-%         DaqDOut(d,0,0);
         writeMCC(d,[]);
         writeMCC(d,trigOut);
         writeMCC(d,[]);
@@ -367,9 +354,6 @@ msclose(sock)
         %                 fprintf(H_Run,'')
         toc
         
-%         DaqDOut(d,0,0);
-%         DaqDOut(d,0,255);
-%         DaqDOut(d,0,0);
         writeMCC(d,[]);
         writeMCC(d,trigOut);
         writeMCC(d,[]);
@@ -423,7 +407,6 @@ msclose(sock)
         writeMCC(d,[]);
         trig_recvd = 0;
         while ~trig_recvd
-%             disp('awaiting trig on')
             trig_recvd = readMCC(d,trigIn);
         end
         writeMCC(d,trigOut);
