@@ -162,6 +162,7 @@ gratingInfo.method = 'symmetric';
 gratingInfo.gtype = 'box';
 width  =  PatchRadiusPix;
 gratingInfo.widthLUT = [result.sizes(:) width(:)];
+gratingInfo.widthLUT = [gratingInfo.widthLUT; 0 0];
 result.gratingInfo = gratingInfo;
 
 %load('GammaTable.mat'); % need to do the gamma correction!!

@@ -5,7 +5,7 @@ p.addParameter('modality','2p');
 p.addParameter('animalid','Mfake');
 p.addParameter('depth','000');
 p.addParameter('orientations',[0 90]);
-p.addParameter('repetitions',20);
+p.addParameter('repetitions',10);
 p.addParameter('stimduration',1);
 % p.addParameter('isi',3);
 p.addParameter('DScreen',15);
@@ -51,7 +51,7 @@ end
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
 stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/mossing/LF2P/StimData/';
-stimFolderLocal = '/home/visual-stim/Documents/StimData';
+stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
 if ~exist(resDirRemote,'dir')
@@ -132,6 +132,11 @@ fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
 
 d = DaqFind;
 err = DaqDConfigPort(d,0,0);
+err = DaqDConfigPort(d,1,1);
+trigOut1 = 8; % this is the trig registering when stim turns on/off
+trigOut2 = 7; % this trig is used for online processing
+trigIn = 8; % this trig comes from the online processing DAQ
+writeMCC(d,[]); % set all output channels to 0
 
 AssertOpenGL;
 
@@ -175,23 +180,50 @@ if kinp == 'q'|kinp == 'Q',
     Screen('CloseAll');
     Priority(0);
 else
-    %     outputSingleScan(daq,[0 1 0]);
-    % start imaging
-    if strcmp(result.modality,'2p')
-        fprintf(H_Scanbox,'G'); %go
-    end
-    pause(5);
-    
     Screen('DrawTexture',wininfo.w, wininfo.BG);
     Screen('Flip', wininfo.w);
+    fprintf(H_Scanbox,'G'); %go
+%     oldCt = DaqCIn(d);
+%     newCt = oldCt;
+%     while newCt == oldCt
+%         newCt = DaqCIn(d);
+%         pause(0.001)
+%     end
+%     oldCt = newCt;
+    trigLvl = 0;
+%     while trigLvl < 128
+        %trigLvl = DaqDIn(d,1);
+    while trigLvl < 1
+        trigLvl = readMCC(d,trigIn); % DaqDIn(d,1);
+    end
+    disp('received trigger')
+    
+    % % tell the other PC to open up a socket
+%     DaqDOut(d,0,0);
+%     DaqDOut(d,0,255);
+    writeMCC(d,[]);
+    writeMCC(d,trigOut2);
+    srvsock = mslisten(3000);
+    
+    pause(3)
+    % % assume the other PC has responded by requesting a connection by this
+    % % point
+    sock = msaccept(srvsock);
+    mssend(sock,2*allConds*result.repetitions)
+    msclose(srvsock);
+    writeMCC(d,[]);
+    %     outputSingleScan(daq,[0 1 0]);
+    % start imaging
+    % pause(5);
+    
     result.starttime  =  datestr(now);
     
     t0  =  GetSecs;
     trnum = 0;
-    oldCt = DaqCIn(d);
+%     oldCt = DaqCIn(d);
     
     % set up to show stimuli
-    for itrial = 1:result.repetitions,
+    for itrial = 1:result.repetitions
         tmpcondEven = conds;
         tmpcondOdd = conds;
         oddTrial = true;
@@ -231,15 +263,20 @@ else
             thisstim.movieDurationFrames = movieDurationFrames;
             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
             
-            trig_received = false;
-            while ~trig_received
-%                 dataIn = DaqDIn(d);
-%                 trig_received = dataIn(1)>0;
-                newCt = DaqCIn(d);
-                trig_received = newCt>oldCt;
-            end
-            oldCt = newCt;
-            result = deliver_stim(result,wininfo,thisstim,d);
+            awaitHandshake(d,trigIn,trigOut2);
+%             trig_received = false;
+%             while ~trig_received
+%                 trig_received = readMCC(d,trigIn);
+% %                 dataIn = DaqDIn(d);
+% %                 trig_received = dataIn(1)>=128;
+% %                 newCt = DaqCIn(d);
+% %                 trig_received = newCt>oldCt;
+%             end
+            
+            
+%             oldCt = newCt;
+            disp('delivering stim')
+            result = deliver_stim(result,wininfo,thisstim,d,trigOut1);
             
             [keyIsDown, secs, keyCode] = KbCheck;
             if keyIsDown & KbName(keyCode) == 'p'
@@ -275,6 +312,7 @@ if strcmp(result.modality,'2p')
     terminate_udp(H_Scanbox)
 end
 terminate_udp(H_Run)
+msclose(sock)
 
 %% that running computer should stop monitoring
 
@@ -286,7 +324,7 @@ terminate_udp(H_Run)
         delete(handle);
     end
 
-    function result = deliver_stim(result,wininfo,thisstim,d)
+    function result = deliver_stim(result,wininfo,thisstim,d,trigOut)
         w = wininfo.w;
         BG = wininfo.BG;
         prestimtimems = 0;
@@ -301,7 +339,7 @@ terminate_udp(H_Run)
             int2str(result.repetitions)], 0, 0, [255,0,0]);
         Screen('Flip', w);
         
-%         WaitSecs(max(0, result.isi-((GetSecs-t0)-trialstart)));
+        %         WaitSecs(max(0, result.isi-((GetSecs-t0)-trialstart)));
         
         Screen('DrawTexture',w,BG);
         fliptime  =  Screen('Flip', w);
@@ -316,9 +354,12 @@ terminate_udp(H_Run)
         stimstart  =  GetSecs-t0;
         
         % send stim on trigger
-        DaqDOut(d,0,0);
-        DaqDOut(d,0,255);
-        DaqDOut(d,0,0);
+%         DaqDOut(d,0,0);
+%         DaqDOut(d,0,255);
+%         DaqDOut(d,0,0);
+        writeMCC(d,[]);
+        writeMCC(d,trigOut);
+        writeMCC(d,[]);
         disp('stim on')
         tic
         % show stimulus
@@ -326,9 +367,12 @@ terminate_udp(H_Run)
         %                 fprintf(H_Run,'')
         toc
         
-        DaqDOut(d,0,0);
-        DaqDOut(d,0,255);
-        DaqDOut(d,0,0);
+%         DaqDOut(d,0,0);
+%         DaqDOut(d,0,255);
+%         DaqDOut(d,0,0);
+        writeMCC(d,[]);
+        writeMCC(d,trigOut);
+        writeMCC(d,[]);
         disp('stim off')
         
         stimt = GetSecs-t0-stimstart;
@@ -355,5 +399,38 @@ terminate_udp(H_Run)
         thisstim.thisfreq = gratingInfo.spFreq(trnum);
         thisstim.thiscontrast = gratingInfo.Contrast(trnum);
         thisstim.trnum = trnum;
+    end
+
+    function writeMCC(d,chanlist)
+        nchan = 8;
+        output = zeros(1,nchan);
+        output(chanlist) = 1;
+        DaqDOut(d,0,bi2de(output));
+    end
+
+    function input = readMCC(d,chanlist)
+        nchan = 8;
+        data = DaqDIn(d);
+        try
+            input = de2bi(data(2),nchan); % port B is read out to 2nd element of data
+            input = input(chanlist);
+        catch
+            input = zeros(size(chanlist));
+        end
+    end
+
+    function awaitHandshake(d,trigIn,trigOut)
+        writeMCC(d,[]);
+        trig_recvd = 0;
+        while ~trig_recvd
+%             disp('awaiting trig on')
+            trig_recvd = readMCC(d,trigIn);
+        end
+        writeMCC(d,trigOut);
+        while trig_recvd
+            disp('awaiting trig off')
+            trig_recvd = readMCC(d,trigIn);
+        end
+        writeMCC(d,[]);
     end
 end
