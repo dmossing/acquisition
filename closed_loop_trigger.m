@@ -48,14 +48,12 @@ end
 
 %%
 
-frames_to_avg = 300;
-ctr = 0;
 
-accumulated = zeros(512,796);
+msk = zeros(512,796,numToTrigOn);
 
-for roino = 1:numToTrigOn
-    
-    if showfirst
+if showfirst
+    for roino = 1:numToTrigOn
+        accumulated = zeros(512,796);
         % DO TTL HANDSHAKE
         dsesh.outputSingleScan([0])
         dsesh.outputSingleScan([1])
@@ -71,12 +69,21 @@ for roino = 1:numToTrigOn
             mmfile.Data.header(1) = -1;
         end
         
-        while (ctr < frames_to_avg) && ~show
+        on = false;
+        onandoff = false;
+        
+        while ~onandoff % wait until the stim has turned on and off
             
             while(mmfile.Data.header(1)<0) % wait for a new frame...
                 if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
                     dsesh.outputSingleScan([0])
                     return;
+                end
+                if on
+                    onandoff = ~mmfile.Data.header(4);
+                    on = ~onandoff;
+                else
+                    on = mmfile.Data.header(4);
                 end
             end
             
@@ -86,26 +93,49 @@ for roino = 1:numToTrigOn
                 mmfile.Format = {'int16' [1 16] 'header' ; ...
                     'uint16' double([mmfile.Data.header(2) mmfile.Data.header(3)]) 'chA'};
                 mchA = double(intmax('uint16')-mmfile.Data.chA);
-                accumulated = mchA;
+                accumulated = on*mchA;
                 flag = 0;
             else
-                accumulated = accumulated + double(intmax('uint16')-mmfile.Data.chA);
+                accumulated = accumulated + on*double(intmax('uint16')-mmfile.Data.chA);
             end
             
-            imagesc(mchA)
+            imagesc(accumulated)
             
             mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
             
             drawnow limitrate;
-            
-            ctr = ctr+1;
         end
         
-    else
-        
+        % select ROI
+        imagesc(accumulated);
+        goon = false; % show finished selecting ROIs by hitting RETURN
+        while ~goon
+            obj = imfreehand;
+            pos = obj.getPosition;
+            msk(:,:,roino) = msk(:,:,roino) | poly2mask(pos(:,1),pos(:,2),size(mchA,1),size(mchA,2));
+            pause;
+            currkey = get(gcf,'CurrentKey');
+            if strcmp(currkey,'return')
+                goon = true;
+            end
+        end
     end
-    
-    while (ctr < frames_to_avg) && ~show
+    handshook = false;
+    while ~handshook
+        while(mmfile.Data.header(1)<0) % wait for a new frame...
+            if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+                dsesh.outputSingleScan([0])
+                return;
+            end
+        end
+        handshook = mmfile.Data.header(4);
+        mmfile.Data.header(1) = -1;
+    end
+else
+    accumulated = zeros(512,796);
+    frames_to_avg = 300;
+    ctr = 0;
+    while ctr < frames_to_avg
         
         while(mmfile.Data.header(1)<0) % wait for a new frame...
             if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
@@ -137,19 +167,19 @@ for roino = 1:numToTrigOn
     
     % select ROI
     imagesc(accumulated);
-    msk = zeros(size(mchA));
-    goon = false; % show finished selecting ROIs by hitting RETURN
-    while ~goon
-        obj = imfreehand;
-        pos = obj.getPosition;
-        msk = msk | poly2mask(pos(:,1),pos(:,2),size(mchA,1),size(mchA,2));
-        pause;
-        currkey = get(gcf,'CurrentKey');
-        if strcmp(currkey,'return')
-            goon = true;
+    for roino=1:numToTrigOn
+        goon = false; % show finished selecting ROIs by hitting RETURN
+        while ~goon
+            obj = imfreehand;
+            pos = obj.getPosition;
+            msk(:,:,roino) = msk(:,:,roino) | poly2mask(pos(:,1),pos(:,2),size(mchA,1),size(mchA,2));
+            pause;
+            currkey = get(gcf,'CurrentKey');
+            if strcmp(currkey,'return')
+                goon = true;
+            end
         end
     end
-    
 end
 
 % acquire baseline data
@@ -199,6 +229,7 @@ fcutoffhi = prctile(fbuffer,100*threshhi);
 fcutofflo = prctile(fbuffer,100*threshlo);
 
 while trigctr < trigno
+    for roino =1:numToTrigOn
     sincelasttrigger = 0;
     % deliver a stim when the neuron is active
     while fcurrent < fcutoffhi || sincelasttrigger < deadframes
@@ -255,6 +286,7 @@ while trigctr < trigno
         mmfile.Data.header(1) = -1;
     end
     dsesh.outputSingleScan([0])
+    end
     sincelastresponse = 0;
     sincelasttrigger = 0;
     trigctr = trigctr+1;
