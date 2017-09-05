@@ -17,6 +17,13 @@ p.addParameter('position',[0,0]);
 p.addParameter('contrast',[0 1]);
 p.addParameter('showfirst',false)
 p.addParameter('numToTrigOn',1)
+p.addParameter('frames_to_avg',300)
+p.addParameter('frames_to_baseline',500)
+p.addParameter('deadframes',50)
+p.addParameter('silentframes',15)
+p.addParameter('updateevery',300)
+p.addParameter('threshhi',0.9)
+p.addParameter('threshlo',0.7)
 p.parse(varargin{:});
 
 % choose parameters
@@ -191,34 +198,63 @@ else
     % % assume the other PC has responded by requesting a connection by this
     % % point
     sock = msaccept(srvsock);
-    mssend(sock,2*allConds*result.repetitions)
+    mssend(sock,(result.numToTrigOn+1)*allConds*result.repetitions)
     mssend(sock,result.showfirst)
     mssend(sock,result.numToTrigOn)
     mssend(sock,sprintf('%s/%s_%s_%s_trigroi.mat', base, base, depth, fileindex));
+    mssend(sock,result.frames_to_avg)
+    mssend(sock,result.frames_to_baseline)
+    mssend(sock,result.deadframes)
+    mssend(sock,result.silentframes)
+    mssend(sock,result.updateevery)
+    mssend(sock,result.threshhi)
+    mssend(sock,result.threshlo)
+    
     msclose(srvsock);
     writeMCC(d,[]);
+    showfirst = result.showfirst;
+    numToTrigOn = result.numToTrigOn;
+    
+%     pause(3)
     
     result.starttime  =  datestr(now);
     
-    t0  =  GetSecs;
+    t0  =  GetSecs
     trnum = 0;
     
     if showfirst
+        gi = gratingInfo;
         gi.Size = result.sizes(1);
         gi.tFreq = result.tFreqs(1);
         gi.spFreq = result.sFreqs(1);
         gi.Contrast = 1;
+%         gi.widthLUT = gratingInfo.widthLUT;
+%         gi.gf = gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
+% gratingInfo.Bcol = 128; % Background 0 black, 255 white
+% gratingInfo.method = 'symmetric';
+% gratingInfo.gtype = 'box';
         
         for i=1:numel(result.orientations)
             gi.Orientation = result.orientations(i);
             thisstim = getStim(gi,1);
             thisstim.tex = gen_gratings(wininfo,gi,thisstim);
+            numFrames = numel(thisstim.tex);
+            thisstim.movieDurationFrames = movieDurationFrames;
+            thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
+            disp('awaiting handshake')
             awaitHandshake(d,trigIn,trigOut2); %%HANDSHAKE
+            pause(2)
+            disp(['showing stim ' num2str(i)])
+            tic
             writeMCC(d,[]);
             writeMCC(d,trigOut2);
             show_tex(wininfo,thisstim);
+            pause(1)
             writeMCC(d,trigOut2);
             writeMCC(d,[]);
+            toc
+            Screen('DrawTexture',wininfo.w, wininfo.BG);
+            Screen('Flip', wininfo.w);
         end
         
         awaitHandshake(d,trigIn,trigOut2); %%HANDSHAKE
@@ -226,31 +262,48 @@ else
     
     % set up to show stimuli
     for itrial = 1:result.repetitions
-        tmpcondEven = conds;
-        tmpcondOdd = conds;
-        oddTrial = true;
+%         tmpcondEven = conds;
+%         tmpcondOdd = conds;
+        tmpcond = cell(result.numToTrigOn+1,1);
+%         oddTrial = true;
         
-        conddoneOdd = 1:size(conds,2);
-        conddoneEven = 1:size(conds,2);
-        while ~isempty(tmpcondOdd) || ~isempty(tmpcondEven)
+        conddone = cell(result.numToTrigOn+1,1);
+        for i=1:result.numToTrigOn+1
+            conddone{i} = 1:size(conds,2);
+            tmpcond{i} = conds;
+        end
+%         conddoneOdd = 1:size(conds,2);
+%         conddoneEven = 1:size(conds,2);
+        while any(~cellfun(@isempty,conddone)) %(~isempty(tmpcondOdd) || ~isempty(tmpcondEven)) || ~isempty
             
             trnum = trnum+1;
             trialstart = GetSecs-t0;
             
             % Information to save in datafile:
-            if oddTrial
-                thiscondind = ceil(rand*size(tmpcondOdd,2));
-                thiscond = tmpcondOdd(:,thiscondind);
-                cnum = conddoneOdd(thiscondind);
-                conddoneOdd(thiscondind)  =  [];
-                tmpcondOdd(:,thiscondind)  =  [];
-            else
-                thiscondind = ceil(rand*size(tmpcondEven,2));
-                thiscond = tmpcondEven(:,thiscondind);
-                cnum = conddoneEven(thiscondind);
-                conddoneEven(thiscondind)  =  [];
-                tmpcondEven(:,thiscondind)  =  [];
-            end
+%             if rem
+%                 thiscondind = ceil(rand*size(tmpcondOdd,2));
+%                 thiscond = tmpcondOdd(:,thiscondind);
+%                 cnum = conddoneOdd(thiscondind);
+%                 conddoneOdd(thiscondind)  =  [];
+%                 tmpcondOdd(:,thiscondind)  =  [];
+%             else
+%                 thiscondind = ceil(rand*size(tmpcondEven,2));
+%                 thiscond = tmpcondEven(:,thiscondind);
+%                 cnum = conddoneEven(thiscondind);
+%                 conddoneEven(thiscondind)  =  [];
+%                 tmpcondEven(:,thiscondind)  =  [];
+%             end
+            whichkind = rem(trnum-1,result.numToTrigOn+1)+1;
+            thiscondind = ceil(rand*size(tmpcond{whichkind},2));
+            thiscond = tmpcond{whichkind}(:,thiscondind);
+            cnum = conddone{whichkind}(thiscondind);
+            conddone{whichkind}(thiscondind)  =  [];
+            tmpcond{whichkind}(:,thiscondind)  =  [];
+%                 thiscond = tmpcondOdd(:,thiscondind);
+%                 cnum = conddoneOdd(thiscondind);
+%                 conddoneOdd(thiscondind)  =  [];
+%                 tmpcondOdd(:,thiscondind)  =  [];
+            
             Trialnum(trnum) = trnum;
             Condnum(trnum) = cnum;
             Repnum(trnum) = itrial;
@@ -275,7 +328,7 @@ else
                 KbWait([],2);
                 %wait for all keys to be released and then any key to be pressed again
             end
-            oddTrial = ~oddTrial;
+%             oddTrial = ~oddTrial;
         end
     end
     
@@ -411,7 +464,7 @@ msclose(sock)
         end
         writeMCC(d,trigOut);
         while trig_recvd
-            disp('awaiting trig off')
+%             disp('awaiting trig off')
             trig_recvd = readMCC(d,trigIn);
         end
         writeMCC(d,[]);

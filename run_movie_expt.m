@@ -11,7 +11,7 @@ p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',1);
-p.addParameter('moviefname','toe_10sec_4x');
+p.addParameter('moviefname','toe_10sec_4x_longer');
 p.parse(varargin{:});
 
 % choose parameters
@@ -30,21 +30,21 @@ assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
 
 wininfo = gen_wininfo(result);
 
-movieDurationSecs = result.stimduration;
-movieDurationFrames = round(movieDurationSecs * wininfo.frameRate);
+% movieDurationSecs = result.stimduration;
+% movieDurationFrames = round(movieDurationSecs * wininfo.frameRate);
 
-PatchRadiusPix = ceil(result.sizes.*wininfo.PixperDeg/2); % radius!!
-
-x0 = floor(wininfo.xRes/2 + (wininfo.xposStim - result.sizes/2)*wininfo.PixperDeg);
-y0 = floor(wininfo.yRes/2 + (-wininfo.yposStim - result.sizes/2)*wininfo.PixperDeg);
-
-if ~isempty(find(x0<1)) | ~isempty(find(y0<1))
-    disp('too big for the monitor, dude! try other parameters');
-    return;
-end
+% PatchRadiusPix = ceil(result.sizes.*wininfo.PixperDeg/2); % radius!!
+%
+% x0 = floor(wininfo.xRes/2 + (wininfo.xposStim - result.sizes/2)*wininfo.PixperDeg);
+% y0 = floor(wininfo.yRes/2 + (-wininfo.yposStim - result.sizes/2)*wininfo.PixperDeg);
+%
+% if ~isempty(find(x0<1)) | ~isempty(find(y0<1))
+%     disp('too big for the monitor, dude! try other parameters');
+%     return;
+% end
 
 % do stimulus data file management
-% stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
+stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
 stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/mossing/LF2P/StimData/';
 stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
@@ -136,14 +136,14 @@ AssertOpenGL;
 % end
 % result.frameRate  =  frameRate;
 
-[gratingInfo.Orientation,gratingInfo.Contrast,gratingInfo.spFreq,...
-    gratingInfo.tFreq, gratingInfo.Size] = deal(zeros(1,allConds*result.repetitions));
+% [gratingInfo.Orientation,gratingInfo.Contrast,gratingInfo.spFreq,...
+%     gratingInfo.tFreq, gratingInfo.Size] = deal(zeros(1,allConds*result.repetitions));
 gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
 gratingInfo.Bcol = 128; % Background 0 black, 255 white
 gratingInfo.method = 'symmetric';
 gratingInfo.gtype = 'box';
-width  =  PatchRadiusPix;
-gratingInfo.widthLUT = [result.sizes(:) width(:)];
+% width  =  PatchRadiusPix;
+% gratingInfo.widthLUT = [result.sizes(:) width(:)];
 result.gratingInfo = gratingInfo;
 
 %load('GammaTable.mat'); % need to do the gamma correction!!
@@ -156,10 +156,10 @@ Screen('DrawTexture',wininfo.w, wininfo.BG);
 Screen('TextFont',wininfo.w, 'Courier New');
 Screen('TextSize',wininfo.w, 14);
 Screen('TextStyle', wininfo.w, 1+2);
-Screen('DrawText', wininfo.w, strcat(num2str(allConds),' Conditions__',...
-    num2str(result.repetitions),' Repeats__',...
-    num2str(allConds*result.repetitions*(isi+stimduration)/60),...
-    ' min estimated Duration.'), 60, 50, [255 128 0]);
+% Screen('DrawText', wininfo.w, strcat(num2str(allConds),' Conditions__',...
+%     num2str(result.repetitions),' Repeats__',...
+%     num2str(allConds*result.repetitions*(isi+stimduration)/60),...
+%     ' min estimated Duration.'), 60, 50, [255 128 0]);
 Screen('DrawText', wininfo.w, strcat('Filename:',fnameLocal,...
     '    Hit any key to continue / q to abort.'), 60, 70, [255 128 0]);
 Screen('Flip',wininfo.w);
@@ -184,19 +184,20 @@ else
     t0  =  GetSecs;
     trnum = 0;
     
-    load(moviefname,'frames')
+    load(result.moviefname,'frames')
+    
+    thisstim.trnum = 1;
     
     % set up to show stimuli
     for itrial = 1:result.repetitions,
         
         %             thisstim = getStim(result.gratingInfo,trnum);
         %             thisstim.itrial = itrial;
-        
+        trialstart = GetSecs-t0;
         thisstim.tex = gen_textures(wininfo,frames);
         numFrames = numel(thisstim.tex);
         thisstim.movieDurationFrames = numFrames;
-        thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
-        
+        thisstim.movieFrameIndices = mod(0:(thisstim.movieDurationFrames-1), numFrames) + 1;
         result = deliver_stim(result,wininfo,thisstim,d);
         
         [keyIsDown, secs, keyCode] = KbCheck;
@@ -204,10 +205,11 @@ else
             KbWait([],2);
             %wait for all keys to be released and then any key to be pressed again
         end
+        thisstim.trnum = thisstim.trnum+1;
     end
 end
 
-result.stimParams = conds(:,Condnum);
+% result.stimParams = conds(:,Condnum);
 result.dispInfo.xRes  =  wininfo.xRes;
 result.dispInfo.yRes  =  wininfo.yRes;
 result.dispInfo.DScreen  =  result.DScreen;
@@ -235,62 +237,66 @@ terminate_udp(H_Run)
 
 % STOP ACQUISITION ON SCANBOX !!!
 
-function terminate_udp(handle)
-fprintf(handle,'S');
-fclose(handle);
-delete(handle);
+    function terminate_udp(handle)
+        fprintf(handle,'S');
+        fclose(handle);
+        delete(handle);
+    end
 
-function result = deliver_stim(result,wininfo,thisstim,d)
-% thisstim just needs to have fields tex, movieDurationFrames, and
-% movieFrameIndices
-w = wininfo.w;
-BG = wininfo.BG;
-prestimtimems = 0;
+    function result = deliver_stim(result,wininfo,thisstim,d)
+        % thisstim just needs to have fields tex, movieDurationFrames, and
+        % movieFrameIndices
+        w = wininfo.w;
+        BG = wininfo.BG;
+        prestimtimems = 0;
+        
+        priorityLevel = MaxPriority(w);
+        Priority(priorityLevel);
+        
+        %--
+        Screen('DrawTexture',w,BG);
+        % Screen('DrawText', w, ['trial ' int2str(thisstim.trnum) '/' ...
+        %     int2str(allConds) 'repetition ' int2str(thisstim.itrial) '/'...
+        %     int2str(result.repetitions)], 0, 0, [255,0,0]);
+        Screen('Flip', w);
+        
+        WaitSecs(max(0, result.isi-((GetSecs-t0)-trialstart)));
+        
+        Screen('DrawTexture',w,BG);
+        fliptime  =  Screen('Flip', w);
+        WaitSecs(max(0,prestimtimems/1000));
+        
+        % last flip before movie starts
+        Screen('DrawTexture',w,BG);
+        fliptime  =  Screen('Flip', w);
+        result.timestamp(thisstim.trnum)  =  fliptime - t0;
+        
+        %             disp(['trnum: ' num2str(trnum) '   ts: ' num2str(result.timestamp(trnum))]);
+        stimstart  =  GetSecs-t0;
+        
+        % send stim on trigger
+        DaqDOut(d,0,0);
+        DaqDOut(d,0,255);
+        DaqDOut(d,0,0);
+        disp('stim on')
+        tic
+        % show stimulus
+        show_tex(wininfo,thisstim)
+        %                 fprintf(H_Run,'')
+        toc
+        
+        DaqDOut(d,0,0);
+        DaqDOut(d,0,255);
+        DaqDOut(d,0,0);
+        disp('stim off')
+        
+        stimt = GetSecs-t0-stimstart;
+        Screen('DrawTexture',w,BG);
+        Screen('Flip', w);
+        Screen('Close',thisstim.tex(:));
+    end
 
-priorityLevel = MaxPriority(w);
-Priority(priorityLevel);
-
-%--
-Screen('DrawTexture',w,BG);
-Screen('DrawText', w, ['trial ' int2str(thisstim.trnum) '/' ...
-    int2str(allConds) 'repetition ' int2str(thisstim.itrial) '/'...
-    int2str(result.repetitions)], 0, 0, [255,0,0]);
-Screen('Flip', w);
-
-WaitSecs(max(0, result.isi-((GetSecs-t0)-trialstart)));
-
-Screen('DrawTexture',w,BG);
-fliptime  =  Screen('Flip', w);
-WaitSecs(max(0,prestimtimems/1000));
-
-% last flip before movie starts
-Screen('DrawTexture',w,BG);
-fliptime  =  Screen('Flip', w);
-result.timestamp(thisstim.trnum)  =  fliptime - t0;
-
-%             disp(['trnum: ' num2str(trnum) '   ts: ' num2str(result.timestamp(trnum))]);
-stimstart  =  GetSecs-t0;
-
-% send stim on trigger
-DaqDOut(d,0,0);
-DaqDOut(d,0,255);
-DaqDOut(d,0,0);
-disp('stim on')
-tic
-% show stimulus
-show_tex(wininfo,thisstim)
-%                 fprintf(H_Run,'')
-toc
-
-DaqDOut(d,0,0);
-DaqDOut(d,0,255);
-DaqDOut(d,0,0);
-disp('stim off')
-
-stimt = GetSecs-t0-stimstart;
-Screen('DrawTexture',w,BG);
-Screen('Flip', w);
-Screen('Close',thisstim.tex(:));
+end
 
 %     function result = pickNext(result,trnum,thiscond)
 %             result.gratingInfo.Orientation(trnum) = thiscond(1);
