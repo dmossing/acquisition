@@ -1,5 +1,5 @@
 %% load info
-filename = 'retinotopy_007.mat';
+filename = 'retinotopy_000.mat';
 load(filename)
 %%
 xray = zeros([size(avg_by_loc{1,1}) size(avg_by_loc)]);

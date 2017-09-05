@@ -1,7 +1,10 @@
+function closed_loop_trigger
+
 % Open memory mapped file -- define just the header first
 
 mmfile = memmapfile('scanbox.mmap','Writable',true, ...
     'Format', { 'int16' [1 16] 'header' } , 'Repeat', 1);
+
 flag = 1;
 
 close all
@@ -18,6 +21,10 @@ disp('waiting on TTL')
 
 dsesh = daq.createSession('ni');
 dsesh.addDigitalChannel('Dev1','port1/line0','OutputOnly');
+
+global mmfile
+global dsesh
+
 dsesh.outputSingleScan([0])
 dsesh.outputSingleScan([1])
 
@@ -25,12 +32,13 @@ dsesh.outputSingleScan([1])
 triginfo_recvd = false;
 while ~triginfo_recvd
     
-    while(mmfile.Data.header(1)<0) % wait for a new frame...
-        if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-            dsesh.outputSingleScan([0])
-            return;
-        end
-    end
+    %     while(mmfile.Data.header(1)<0) % wait for a new frame...
+    %         if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+    %             dsesh.outputSingleScan([0])
+    %             return;
+    %         end
+    %     end
+    awaitFrame;
     triginfo_recvd = mmfile.Data.header(4);
     if triginfo_recvd
         disp('received TTL')
@@ -39,71 +47,113 @@ while ~triginfo_recvd
         showfirst = msrecv(sock);
         numToTrigOn = msrecv(sock);
         roifile = msrecv(sock);
+        frames_to_avg = msrecv(sock); % only used if ~showfirst
+        frames_to_baseline = msrecv(sock);
+        deadframes = msrecv(sock);
+        silentframes = msrecv(sock);
+        updateevery = msrecv(sock);
+        threshhi = msrecv(sock);
+        threshlo = msrecv(sock);
         dsesh.outputSingleScan([1])
         dsesh.outputSingleScan([0])
         msclose(sock)
     end
-    mmfile.Data.header(1) = -1;
+    %     mmfile.Data.header(1) = -1;
 end
 
 %%
 
 
-msk = zeros(512,796,numToTrigOn);
+msk = false(512,796,numToTrigOn);
+% trigbuffer = ones(100,1);
 
 if showfirst
     for roino = 1:numToTrigOn
+        pause(2)
         accumulated = zeros(512,796);
-        % DO TTL HANDSHAKE
-        dsesh.outputSingleScan([0])
-        dsesh.outputSingleScan([1])
-        handshook = false;
-        while ~handshook
-            while(mmfile.Data.header(1)<0) % wait for a new frame...
-                if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-                    dsesh.outputSingleScan([0])
-                    return;
-                end
-            end
-            handshook = mmfile.Data.header(4);
-            mmfile.Data.header(1) = -1;
-        end
+        disp('initiating handshake')
+        performHandshake; %(dsesh,mmfile)
+        disp('done')
         
-        on = false;
-        onandoff = false;
-        
-        while ~onandoff % wait until the stim has turned on and off
-            
-            while(mmfile.Data.header(1)<0) % wait for a new frame...
-                if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-                    dsesh.outputSingleScan([0])
-                    return;
+%         on = false;
+%         onandoff = false;
+        off = false;
+        offandon = false;
+        offandonandoff = false;
+        while ~offandonandoff
+            awaitFrame;
+            if off
+                offandon = mmfile.Data.header(4);
+                if offandon
+                    off = false;
+                    disp('goes up')
                 end
-                if on
-                    onandoff = ~mmfile.Data.header(4);
-                    on = ~onandoff;
-                else
-                    on = mmfile.Data.header(4);
+            elseif offandon
+                offandonandoff = ~mmfile.Data.header(4);
+                if offandonandoff
+                    offandon = false;
+                    disp('goes down')
                 end
+            else
+                off = ~mmfile.Data.header(4);
             end
+%         prevHeader = false;
+%         
+%         while ~onandoff % wait until the stim has turned on and off
+%             awaitFrame;
+%             if on
+%                 onandoff = ~mmfile.Data.header(4) && ~prevHeader;
+%                 on = ~onandoff;
+%                 if onandoff
+%                     disp('goes down')
+%                 end
+%             else
+%                 on = mmfile.Data.header(4) && prevHeader;
+%                 if on
+%                     disp('goes up')
+%                 end
+%             end
+%             prevHeader = mmfile.Data.header(4);
+            %             while(mmfile.Data.header(1)<0) % wait for a new frame...
+            %                 if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+            %                     dsesh.outputSingleScan([0])
+            %                     return;
+            %                 end
+            %                 if on
+            %                     onandoff = ~mmfile.Data.header(4);
+            %                     on = ~onandoff;
+            %                 else
+            %                     on = mmfile.Data.header(4);
+            %                 end
+            %             end
             
-            display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
+            %             display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
             
             if(flag) % first time? Format chA according to lines/columns in data
                 mmfile.Format = {'int16' [1 16] 'header' ; ...
                     'uint16' double([mmfile.Data.header(2) mmfile.Data.header(3)]) 'chA'};
                 mchA = double(intmax('uint16')-mmfile.Data.chA);
-                accumulated = on*mchA;
+%                 if on
+                if offandon
+                    accumulated = mchA;
+                else
+                    accumulated = zeros(size(mchA));
+                end
                 flag = 0;
             else
-                accumulated = accumulated + on*double(intmax('uint16')-mmfile.Data.chA);
+                mchA = double(intmax('uint16')-mmfile.Data.chA);
+%                 if on
+                if offandon
+                    accumulated = accumulated + mchA;
+                end
             end
-            
+%             subplot(1,2,1)
             imagesc(accumulated)
-            
-            mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
-            
-            drawnow limitrate;
+%             trigbuffer = [trigbuffer(2:end); mmfile.Data.header(4)];
+%             subplot(1,2,2)
+%             plot(trigbuffer)
+%             drawnow limitrate;
+            % mmfile.Data.header(1) = -1;
         end
         
         % select ROI
@@ -120,31 +170,21 @@ if showfirst
             end
         end
     end
-    handshook = false;
-    while ~handshook
-        while(mmfile.Data.header(1)<0) % wait for a new frame...
-            if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-                dsesh.outputSingleScan([0])
-                return;
-            end
-        end
-        handshook = mmfile.Data.header(4);
-        mmfile.Data.header(1) = -1;
-    end
+    performHandshake; %(dsesh,mmfile)
 else
     accumulated = zeros(512,796);
-    frames_to_avg = 300;
+    %     frames_to_avg = 300;
     ctr = 0;
     while ctr < frames_to_avg
         
-        while(mmfile.Data.header(1)<0) % wait for a new frame...
-            if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-                dsesh.outputSingleScan([0])
-                return;
-            end
-        end
-        
-        display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
+        %         while(mmfile.Data.header(1)<0) % wait for a new frame...
+        %             if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+        %                 dsesh.outputSingleScan([0])
+        %                 return;
+        %             end
+        %         end
+        awaitFrame;
+        %         display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
         
         if(flag) % first time? Format chA according to lines/columns in data
             mmfile.Format = {'int16' [1 16] 'header' ; ...
@@ -158,7 +198,7 @@ else
         
         imagesc(mchA)
         
-        mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
+        %         mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
         
         drawnow limitrate;
         
@@ -190,36 +230,37 @@ end
 
 % acquire baseline data
 ctr = 0;
-frames_to_baseline = 500;
+% frames_to_baseline = 500;
 baseline_trace = nan(frames_to_baseline,numToTrigOn);
-dots = {'m.','g.','o.'};
+dots = {'m','r','g'};
 while ctr < frames_to_baseline
     
-    while(mmfile.Data.header(1)<0) % wait for a new frame...
-        if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-            dsesh.outputSingleScan([0])
-            return;
-        end
-    end
+    %     while(mmfile.Data.header(1)<0) % wait for a new frame...
+    %         if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+    %             dsesh.outputSingleScan([0])
+    %             return;
+    %         end
+    %     end
+    awaitFrame;
     
-    display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
+    %     display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
     
     mchA = double(intmax('uint16')-mmfile.Data.chA);
     
-    subplot(1,2,1)
+    subplot(1,1+numToTrigOn,1)
     imagesc(mchA)
     hold on;
     for roino=1:numToTrigOn
-        scatter(roibds{roino}(:,1),roibds{roino}(:,2),dots{roino})
+        scatter(roibds{roino}(:,2),roibds{roino}(:,1),[dots{roino} '.'])
     end
     hold off;
-    subplot(1,2,2)
     for roino = 1:numToTrigOn
+        subplot(1,1+numToTrigOn,1+roino)
         baseline_trace(ctr+1,roino) = sum(mchA(msk(:,:,roino)));
+        plot(1:frames_to_baseline,baseline_trace(:,roino),[dots{roino} '-'])
     end
-    plot(1:frames_to_baseline,baseline_trace)
     
-    mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
+    %     mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
     
     drawnow limitrate;
     
@@ -230,30 +271,36 @@ end
 
 trigctr = 0;
 fcurrent = 0;
-deadframes = 50;
-silentframes = 15;
+% deadframes = 50;
+% silentframes = 15;
 fbuffer = baseline_trace;
 first = true;
-updateevery = 500;
-updatectr = 0;
+% updateevery = 500;
+% updatectr = 0;
 
-threshhi = 0.9;
-threshlo = 0.6;
+% threshhi = 0.9;
+% threshlo = 0.7;
 fcutoffhi = prctile(fbuffer,100*threshhi);
 fcutofflo = prctile(fbuffer,100*threshlo);
 fcurrent = zeros(1,numToTrigOn);
+skipout = false;
+sincelasttrigger = 0;
 
 while trigctr < trigno
-    for roino =1:numToTrigOn
-        sincelasttrigger = 0;
+    sincelasttrigger = sincelasttrigger+1;
+    whichtrig = rem(trigctr,numToTrigOn+1);
+    if whichtrig<numToTrigOn
+        trigroino = 1+whichtrig;
+%         sincelasttrigger = 0;
         % deliver a stim when the neuron is active
-        while fcurrent < fcutoffhi || sincelasttrigger < deadframes
-            while(mmfile.Data.header(1)<0) % wait for a new frame...
-                if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-                    return;
-                end
-            end
-            if rem(updatectr,updateevery)==0
+        while fcurrent(trigroino) < fcutoffhi(trigroino) || sincelasttrigger < deadframes
+            %             while(mmfile.Data.header(1)<0) % wait for a new frame...
+            %                 if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+            %                     return;
+            %                 end
+            %             end
+            awaitFrame;
+            if rem(sincelasttrigger,updateevery)==0 %rem(updatectr,updateevery)==0
                 if first
                     first = false;
                 else
@@ -261,7 +308,7 @@ while trigctr < trigno
                     fcutofflo = prctile(fbuffer,100*threshlo);
                 end
             end
-            updatectr = updatectr+1;
+%             updatectr = updatectr+1;
             
             %         display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
             
@@ -269,124 +316,161 @@ while trigctr < trigno
             for roino=1:numToTrigOn
                 fcurrent(roino) = sum(mchA(msk(:,:,roino)));
             end
-            subplot(1,numToTrigOn,1)
+            subplot(1,1+numToTrigOn,1)
             imagesc(mchA)
             hold on;
             for roino=1:numToTrigOn
-                scatter(roibds{roino}(:,1),roibds{roino}(:,2),dots{roino})
+                scatter(roibds{roino}(:,2),roibds{roino}(:,1),[dots{roino} '.'])
             end
             hold off;
             fbuffer = [fbuffer(2:end,:); fcurrent];
             for roino=1:numToTrigOn
-                subplot(1,numToTrigOn,1+roino)
-                plot(fbuffer(:,roino))
+                subplot(1,1+numToTrigOn,1+roino)
+                plot(fbuffer(:,roino),[dots{roino} '-'])
                 hold on;
                 plot(fcutoffhi(roino)*ones(size(fbuffer,1),1),'g')
                 plot(fcutofflo(roino)*ones(size(fbuffer,1),1),'b')
                 hold off;
             end
             
-            mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
+            %             mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
             
             drawnow limitrate;
             sincelasttrigger = sincelasttrigger+1;
         end
-        disp(num2str(trigctr))
-        % SEND TTL PULSE
+        sincelastresponse = 0;
+    else
+        % deliver a stim when the neuron has been silent awhile
+        while sincelastresponse < silentframes || sincelasttrigger < deadframes
+            %         while(mmfile.Data.header(1)<0) % wait for a new frame...
+            %             if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+            %                 dsesh.outputSingleScan([0])
+            %                 return;
+            %             end
+            %         end
+            awaitFrame;
+            if rem(sincelasttrigger,updateevery)==0 %rem(updatectr,updateevery)==0
+                fcutoffhi = prctile(fbuffer,100*threshhi);
+                fcutofflo = prctile(fbuffer,100*threshlo);
+            end
+%             updatectr = updatectr+1;
+            
+            %         display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
+            
+            mchA = double(intmax('uint16')-mmfile.Data.chA);
+            for roino=1:numToTrigOn
+                fcurrent(roino) = sum(mchA(msk(:,:,roino)));
+            end
+            subplot(1,1+numToTrigOn,1)
+            imagesc(mchA)
+            hold on;
+            for roino=1:numToTrigOn
+                scatter(roibds{roino}(:,2),roibds{roino}(:,1),[dots{roino} '.'])
+            end
+            hold off;
+            fbuffer = [fbuffer(2:end,:); fcurrent];
+            for roino=1:numToTrigOn
+                subplot(1,1+numToTrigOn,1+roino)
+                plot(fbuffer(:,roino),[dots{roino} '-'])
+                hold on;
+                plot(fcutoffhi(roino)*ones(size(fbuffer,1),1),'g')
+                plot(fcutofflo(roino)*ones(size(fbuffer,1),1),'b')
+                hold off;
+            end
+            
+            %         mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
+            
+            drawnow limitrate;
+%             sincelasttrigger = sincelasttrigger+1;
+            if all(fcurrent < fcutofflo)
+                sincelastresponse = sincelastresponse+1;
+            else
+                sincelastresponse = 0;
+            end
+        end
+    end
+    disp(num2str(trigctr))
+    performHandshake; %(dsesh,mmfile)
+    sincelasttrigger = 0;
+    trigctr = trigctr+1;
+end
+
+save(roifile,'msk')
+
+over = false;
+while ~over
+    %     while(mmfile.Data.header(1)<0) % wait for a new frame...
+    %         if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+    %             dsesh.outputSingleScan([0])
+    %             return;
+    %         end
+    %     end
+    over = awaitFrame;
+end
+
+clear mmfile; % close the memory mapped file
+close all;     % close all figures
+dsesh.release
+
+    function performHandshake %dsesh,mmfile)
         dsesh.outputSingleScan([0])
         dsesh.outputSingleScan([1])
-        handshook = false;
-        while ~handshook
+        handshk = false;
+        twoinarow = false;
+        while ~twoinarow %%% NEW MAYBE SAFER %~handshk ORIGINAL
+            %             mmfile.Data.header(1) = -1;
             while(mmfile.Data.header(1)<0) % wait for a new frame...
                 if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
                     dsesh.outputSingleScan([0])
                     return;
                 end
             end
-            handshook = mmfile.Data.header(4);
-            mmfile.Data.header(1) = -1;
+            % handshk = mmfile.Data.header(4); ORIGINAL
+            %%% NEW MAYBE SAFER
+            if ~handshk
+                handshk = mmfile.Data.header(4);
+            else
+                twoinarow = mmfile.Data.header(4);
+                if ~twoinarow
+                    handshk = false;
+                end
+            end
+            %%% NEW MAYBE SAFER
+            mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
         end
+        dsesh.outputSingleScan([1])
         dsesh.outputSingleScan([0])
     end
-    sincelastresponse = 0;
-    sincelasttrigger = 0;
-    trigctr = trigctr+1;
-    % deliver a stim when the neuron has been silent awhile
-    while sincelastresponse < silentframes || sincelasttrigger < deadframes
+
+    function over = awaitFrame
+        over = false;
+        %         mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
         while(mmfile.Data.header(1)<0) % wait for a new frame...
             if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
                 dsesh.outputSingleScan([0])
+                over = true;
                 return;
             end
         end
-        if rem(updatectr,updateevery)==0
-            fcutoffhi = prctile(fbuffer,100*threshhi);
-            fcutofflo = prctile(fbuffer,100*threshlo);
-        end
-        updatectr = updatectr+1;
-        
-        %         display(sprintf('Frame %06d',mmfile.Data.header(1))); % print frame# being processed
-        
-        mchA = double(intmax('uint16')-mmfile.Data.chA);
-        for roino=1:numToTrigOn
-            fcurrent(roino) = sum(mchA(msk(:,:,roino)));
-        end
-        subplot(1,numToTrigOn,1)
-        imagesc(mchA)
-        hold on;
-        for roino=1:numToTrigOn
-            scatter(roibds{roino}(:,1),roibds{roino}(:,2),dots{roino})
-        end
-        hold off;
-        fbuffer = [fbuffer(2:end,:); fcurrent];
-        for roino=1:numToTrigOn
-            subplot(1,numToTrigOn,1+roino)
-            plot(fbuffer(:,roino))
-            hold on;
-            plot(fcutoffhi(roino)*ones(size(fbuffer,1),1),'g')
-            plot(fcutofflo(roino)*ones(size(fbuffer,1),1),'b')
-            hold off;
-        end
-        
+        display(sprintf('Frame %06d',mmfile.Data.header(1)));
         mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
-        
-        drawnow limitrate;
-        sincelasttrigger = sincelasttrigger+1;
-        if fcurrent < fcutofflo
-            sincelastresponse = sincelastresponse+1;
-        else
-            sincelastresponse = 0;
-        end
     end
-    disp(num2str(trigctr))
-    % SEND TTL PULSE
-    dsesh.outputSingleScan([0])
-    dsesh.outputSingleScan([1])
-    handshook = false;
-    while ~handshook
-        while(mmfile.Data.header(1)<0) % wait for a new frame...
-            if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-                dsesh.outputSingleScan([0])
-                return;
-            end
-        end
-        handshook = mmfile.Data.header(4);
-        mmfile.Data.header(1) = -1;
-    end
-    dsesh.outputSingleScan([0])
-    sincelasttrigger = 0;
-    trigctr = trigctr+1;
-end
+% that fn. replaces this:
+% SEND TTL PULSE
+%     dsesh.outputSingleScan([0])
+%     dsesh.outputSingleScan([1])
+%     handshook = false;
+%     while ~handshook
+%         while(mmfile.Data.header(1)<0) % wait for a new frame...
+%             if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
+%                 dsesh.outputSingleScan([0])
+%                 return;
+%             end
+%         end
+%         handshook = mmfile.Data.header(4);
+%         mmfile.Data.header(1) = -1;
+%     end
+%     dsesh.outputSingleScan([1])
+%     dsesh.outputSingleScan([0])
 
-while true
-    while(mmfile.Data.header(1)<0) % wait for a new frame...
-        if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
-            dsesh.outputSingleScan([0])
-            return;
-        end
-    end
 end
-
-clear mmfile; % close the memory mapped file
-close all;     % close all figures
-dsesh.release
