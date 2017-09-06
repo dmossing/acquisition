@@ -34,19 +34,19 @@ err = DaqDConfigPort(d,0,0);
 
 % set up msocket
 
-% srvsock = mslisten(3000);
-% tell the other PC to open up a socket
-% outputSingleScan(daq,[0 0 0]);
-% outputSingleScan(daq,[1 0 0]);
-% outputSingleScan(daq,[0 0 0]);
+srvsock = mslisten(3000);
+% % tell the other PC to open up a socket
+% % outputSingleScan(daq,[0 0 0]);
+% % outputSingleScan(daq,[1 0 0]);
+% % outputSingleScan(daq,[0 0 0]);
 DaqDOut(d,0,0);
 DaqDOut(d,0,255);
 
-% pause(3)
+pause(3)
 % % assume the other PC has responded by requesting a connection by this
 % % point
-% sock = msaccept(srvsock);
-% msclose(srvsock);
+sock = msaccept(srvsock);
+msclose(srvsock);
 
 DaqDOut(d,0,255);
 DaqDOut(d,0,0);
@@ -116,7 +116,7 @@ try
     mY = 0; % The y-coordinate of the mouse cursor
     % Draw the sprite at the new location.
     while oriIndex <= nori
-        Screen('DrawTexture', window, blankFrame(blankFrameIndex,oriIndex), [0 0 1 1], CenterRectOnPoint([0 0 1 1], mX, mY));
+        Screen('DrawTexture', window, blankFrame(blankFrameIndex), [0 0 1 1], CenterRectOnPoint([0 0 1 1], mX, mY));
         % Call Screen('Flip') to update the screen.  Note that calling
         % 'Flip' after we have both erased and redrawn the sprite prevents
         % the sprite from flickering.
@@ -151,6 +151,7 @@ try
         % Draw the sprite at the new location.
         DaqDOut(d,0,0);
         DaqDOut(d,0,255);
+        DaqDOut(d,0,127);
         while gratingFrameIndex < (ratio)*numFrames
             Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
             % Call Screen('Flip') to update the screen.  Note that calling
@@ -159,6 +160,7 @@ try
             Screen('Flip', window);
             gratingFrameIndex = gratingFrameIndex + 1;
         end
+        DaqDOut(d,0,127);
         DaqDOut(d,0,255);
         DaqDOut(d,0,0);
         while gratingFrameIndex < (ratio+1)*numFrames

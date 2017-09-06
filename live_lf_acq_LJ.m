@@ -40,7 +40,7 @@ while(ishandle(h))
     [rc] = AT_QueueBuffer(hndl,imagesize);
     AT_CheckWarning(rc);
     %     [rc] = AT_Command(hndl,'SoftwareTrigger');
-    %     AT_CheckWarning(rc);
+    %     AT_CheckWarning(rc)
     [rc,buf] = AT_WaitBuffer(hndl,1000);
     AT_CheckWarning(rc);
     [rc,buf2] = AT_ConvertMono16ToMatrix(buf,height,width,stride);

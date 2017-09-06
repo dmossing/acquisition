@@ -5,6 +5,7 @@ Bcol = 128;
 screenNumber = 0;
 
 Screen('Preference', 'VBLTimestampingMode', -1);
+% Screen('Preference','SkipSyncTests', 1); %%% TEMPORARY
 Screen('Preference','SkipSyncTests', 0);
 [w,~] = Screen('OpenWindow',screenNumber);
 

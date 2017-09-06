@@ -7,6 +7,7 @@ import scipy.io as sio
 import os
 import numpy as np
 from tifffile import imsave
+import sys
 
 def return_dims(fname):
     # return size of sbx file, with indices (t,c,z,y,x), skipping the first (incomplete) frame
@@ -82,3 +83,9 @@ def sbxtotiff(fname,chunksize=200):
             print(i)
             raw = loadsbx(fname,frames=np.arange(startind[i],endind[i]))
             imsave('green_channel.tif',raw[:,0,0],append=True)
+
+if __name__=="__main__":
+    sbxfile = sys.argv[1]
+    if '.sbx' in sbxfile:
+        sbxfile = sbxfile.split('.sbx')[0]
+    sbxtohdf5(sbxfile)

@@ -27,7 +27,7 @@ y0 = floor(yRes/2 - yposStim*PixperDeg - thissize.*PixperDeg/2);
 [x,y] = meshgrid([-thiswidth:thiswidth],[-thiswidth:thiswidth]);
 numFrames = ceil(frameRate/thisspeed);
 for i=1:numFrames
-    tic
+%     tic
     clear T G;
     phase = (i/numFrames)*2*pi;
     angle = thisdeg*pi/180; % 30 deg orientation.
@@ -53,10 +53,10 @@ for i=1:numFrames
     
     T = bg;
     T(y0:y0+size(G,2)-1,x0:x0+size(G,2)-1) = G;
-    toc
-    tic
+%     toc
+%     tic
     tex(i) = Screen('MakeTexture', w, T);
-    toc
+%     toc
 end
 end
 
