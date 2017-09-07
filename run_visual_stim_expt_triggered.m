@@ -11,7 +11,7 @@ p.addParameter('stimduration',1);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
 p.addParameter('sizes',25);
-p.addParameter('sFreqs',0.04); % cyc/vis deg
+p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',[0 1]);
