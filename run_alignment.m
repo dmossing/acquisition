@@ -12,13 +12,21 @@ function run_alignment(foldname,lookfor)
         %if info.scanmode==0
         %    info.recordsPerBuffer = info.recordsPerBuffer*2;
         %end
-        which sbxAlignmaster
-        if isfield(info,'rect')
+%
+        try
+            which sbxAlignmaster
             sbxAlignmaster([foldname '/' filebase],[],info.rect);
-        else
-            sbxAlignmaster([foldname '/' filebase]);
-            which sbxComputeci
-        	sbxComputeci([foldname '/' filebase]);
+        catch
+            sbxalignmaster([foldname '/' filebase])
+%
+%        which sbxAlignmaster
+%        if isfield(info,'rect')
+%            sbxAlignmaster([foldname '/' filebase],[],info.rect);
+%        else
+%            sbxAlignmaster([foldname '/' filebase]);
+%            which sbxComputeci
+%        	sbxComputeci([foldname '/' filebase]);
+%
         end
         %which sbxComputeci
         %sbxComputeci([foldname '/' filebase],[],info.rect);
