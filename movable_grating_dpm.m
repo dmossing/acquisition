@@ -1,5 +1,5 @@
 function [xpos,ypos] = movable_grating_dpm(ratio,orientations,DScreen,...
-    ScreenType,gratingSize,spFreq,tFreq)
+    ScreenType,gratingSize,spFreq,tFreq,contrast)
 
 if nargin<2 || isempty(orientations)
     orientations = 0:45:315;
@@ -18,6 +18,9 @@ if nargin<6 || isempty(spFreq)
 end
 if nargin<7 || isempty(tFreq)
     tFreq = 1;
+end
+if nargin<8 || isempty(contrast)
+    contrast = 1;
 end
 
 frameRate = 60;     % Hz
@@ -81,7 +84,7 @@ try
             ext = max(max(max(s)),abs(min(min(s))));
             G0=ext*((s>0)-(s<0));%.*g0;
             incmax=min(255-Bcol,Bcol);
-            G=(floor((incmax*G0)+Bcol));
+            G=(floor(contrast*(incmax*G0)+Bcol));
             gratingFrame(i,j) = Screen('MakeTexture', window, G);
         end
         for k = 1:ratio*numFrames
