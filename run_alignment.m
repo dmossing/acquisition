@@ -13,11 +13,24 @@ function run_alignment(foldname,lookfor)
         %    info.recordsPerBuffer = info.recordsPerBuffer*2;
         %end
 %
-        try
+%        try
             which sbxAlignmaster
-            sbxAlignmaster([foldname '/' filebase],[],info.rect);
-        catch
-            sbxalignmaster([foldname '/' filebase])
+            %sbxAlignmaster([foldname '/' filebase],[],info.rect);
+            load([foldname '/' filebase],'info')
+            try
+                numDepths = info.otparam(3);
+            catch
+                numDepths = 1;
+            end
+            for depth=1:numDepths
+                try
+                    sbxAlignmaster([foldname '/' filebase],depth,info.rect);
+                catch
+                    sbxAlignmaster([foldname '/' filebase],depth,[]);
+                end
+            end
+%        catch
+%            sbxalignmaster([foldname '/' filebase])
 %
 %        which sbxAlignmaster
 %        if isfield(info,'rect')
@@ -27,7 +40,7 @@ function run_alignment(foldname,lookfor)
 %            which sbxComputeci
 %        	sbxComputeci([foldname '/' filebase]);
 %
-        end
+%        end
         %which sbxComputeci
         %sbxComputeci([foldname '/' filebase],[],info.rect);
     end
