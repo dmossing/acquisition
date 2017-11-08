@@ -52,7 +52,7 @@ function rect = sbxAlignmaster(fname,Depth,rect)
         str = '';
     end
     
-    Frames = idDepth([fname,'.sbx'],'Depth',Depth)';    
+    Frames = idDepth([fname,'.sbx'],[],'Depth',Depth)';    
     if Depth==1
         Frames(1) = []; % throw out very first frame as it's wrong (blank row in T added in at end)
     end
