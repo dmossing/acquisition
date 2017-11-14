@@ -104,7 +104,7 @@ end
 % config.info = [];
 % config.MotionCorrected = false;
 try 
-    config.Depth = info.otparam(3);
+    config.Depth = info.otparam(3); %should be (3), testing what happens if this goes back
 catch
     config.Depth = 1; % current default
 end

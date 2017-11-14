@@ -34,6 +34,9 @@ while(true)
     
     mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
     
+    imagesc(mchA);
+    drawnow limitrate;
+    
 end
 
 clear(mmfile); % close the memory mapped file
