@@ -1,4 +1,4 @@
-function run_busse_expt(varargin)
+function run_visual_stim_expt_generalized(varargin)
 
 p = inputParser;
 p.addParameter('modality','2p');
@@ -15,24 +15,21 @@ p.addParameter('sFreqs',0.04); % cyc/vis deg
 p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',[0.06 0.12 0.25 0.5]);
-p.addParameter('gen_tex_fn',@gen_plaids);
+p.addParameter('gen_stim_vars_fn',@gen_busse_stim_vars);
 p.parse(varargin{:});
 
 % choose parameters
 
 result = p.Results;
 
+stim_vars = gen_stim_vars_fn();
+
 isi = result.isi;
 stimduration = result.stimduration;
 
 % create all stimulus conditions from the single parameter vectors
-nConds  =  [1+length(result.contrast) 1+length(result.contrast)]; % one extra for zero contrast
-allConds  =  prod(nConds)+2; % two extra for individual full contrast gratings
-% result.allConds = allConds;
-% repPerCond  =  allConds./nConds;
-conds  =  makeAllCombos([0 result.contrast 1],[0 result.contrast 1]);
-conds(:,conds(1,:) == 1 & conds(2,:) ~= 0) = [];
-conds(:,conds(1,:) ~= 0 & conds(2,:) == 1) = [];
+conds = stim_vars.gen_conds_fn(result);
+allConds = size(conds,2);
 
 assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
 
@@ -138,24 +135,8 @@ err = DaqDConfigPort(d,0,0);
 
 AssertOpenGL;
 
-% frameRate = Screen('FrameRate',screenNumber);
-% if(frameRate == 0)  %if MacOSX does not know the frame rate the 'FrameRate' will return 0.
-%     frameRate = 100;
-% end
-% result.frameRate  =  frameRate;
+result = stim_vars.gen_result_fn(result,conds);
 
-[gratingInfo.Contrast1,gratingInfo.Contrast2] = deal(zeros(1,allConds*result.repetitions));
-gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
-gratingInfo.Bcol = 128; % Background 0 black, 255 white
-gratingInfo.method = 'symmetric';
-gratingInfo.gtype = 'box';
-width  =  PatchRadiusPix;
-gratingInfo.widthLUT = [result.sizes(:) width(:)];
-result.gratingInfo = gratingInfo;
-
-%load('GammaTable.mat'); % need to do the gamma correction!!
-%CT = (ones(3,1)*correctedTable(:,2)')'/255;
-%Screen('LoadNormalizedGammaTable',w, CT);
 load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
@@ -191,15 +172,9 @@ else
     t0  =  GetSecs;
     trnum = 0;
     
-    Nconds = size(conds,2);
-    allthecondinds = zeros(result.repetitions,Nconds);
-    for itrial = 1:result.repetitions,
-        allthecondinds(itrial,:) = randperm(Nconds);
-    end
-    
     % set up to show stimuli
     for itrial = 1:result.repetitions,
-        for istim = 1:Nconds
+        for istim = 1:allConds
             %             [kinp,tkinp] = GetChar;
             
             disp('Signal on 2')
@@ -208,19 +183,19 @@ else
             trialstart = GetSecs-t0;
             
             % Information to save in datafile:
-            thiscondind = allthecondinds(itrial,istim);
-            thiscond = conds(:,thiscondind);
+%             thiscondind = allthecondinds(istim,itrial);
+%             thiscond = conds(:,thiscondind);
             cnum = istim;
             Trialnum(trnum) = trnum;
             Condnum(trnum) = cnum;
             Repnum(trnum) = itrial;
-            result = pickNext(result,trnum,thiscond);
+%             result = pickNext(result,trnum,thiscond);
             % end save information
             
-            thisstim = getStim(result.gratingInfo,trnum);
+            thisstim = stim_vars.gen_stim_fn(result.gratingInfo,trnum);
             thisstim.itrial = itrial;
             
-            thisstim.tex = result.gen_tex_fn(wininfo,result.gratingInfo,thisstim);
+            thisstim.tex = stim_vars.gen_tex_fn(wininfo,result.gratingInfo,thisstim);
             numFrames = numel(thisstim.tex);
             thisstim.movieDurationFrames = movieDurationFrames;
             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
@@ -322,26 +297,16 @@ terminate_udp(H_Run)
             Screen('Close',thisstim.tex(:));
     end
 
-    function result = pickNext(result,trnum,thiscond)
-            result.gratingInfo.Contrast1(trnum) = thiscond(1);
-            result.gratingInfo.Contrast2(trnum) = thiscond(2);
-            result.gratingInfo.Orientation1(trnum) = result.orientations(1);
-            result.gratingInfo.Orientation2(trnum) = result.orientations(2);
-            result.gratingInfo.Size(trnum) = result.sizes;
-            result.gratingInfo.tFreq(trnum) = result.tFreqs;
-            result.gratingInfo.spFreq(trnum) = result.sFreqs;
-    end
-
-    function thisstim = getStim(gratingInfo,trnum)
-            bin = (gratingInfo.widthLUT(:,1) == gratingInfo.Size(trnum));
-            thisstim.thiswidth = gratingInfo.widthLUT(bin,2);
-            thisstim.thissize = gratingInfo.Size(trnum);
-            thisstim.thisspeed = gratingInfo.tFreq(trnum);
-            thisstim.thisfreq = gratingInfo.spFreq(trnum);
-            thisstim.thiscontrast1 = gratingInfo.Contrast1(trnum);
-            thisstim.thiscontrast2 = gratingInfo.Contrast2(trnum);
-            thisstim.thisdeg1 = gratingInfo.Orientation1(trnum);
-            thisstim.thisdeg2 = gratingInfo.Orientation2(trnum);
-            thisstim.trnum = trnum;
-    end
+%     function thisstim = getStim(gratingInfo,trnum)
+%             bin = (gratingInfo.widthLUT(:,1) == gratingInfo.Size(trnum));
+%             thisstim.thiswidth = gratingInfo.widthLUT(bin,2);
+%             thisstim.thissize = gratingInfo.Size(trnum);
+%             thisstim.thisspeed = gratingInfo.tFreq(trnum);
+%             thisstim.thisfreq = gratingInfo.spFreq(trnum);
+%             thisstim.thiscontrast1 = gratingInfo.Contrast1(trnum);
+%             thisstim.thiscontrast2 = gratingInfo.Contrast2(trnum);
+%             thisstim.thisdeg1 = gratingInfo.Orientation1(trnum);
+%             thisstim.thisdeg2 = gratingInfo.Orientation2(trnum);
+%             thisstim.trnum = trnum;
+%     end
 end
