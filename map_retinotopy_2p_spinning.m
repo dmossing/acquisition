@@ -138,42 +138,44 @@ try
     %     numlocs = 5;
     
     % Exit the demo as soon as the user presses a mouse button.
-    for i=1:numel(order)
-        % ------ Bookkeeping Variables ------
-        gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
-        gratingFrameIndex = 1; % Which frame of the animation should we show?
-%         oriIndex = indo(order(i));
-        % We need to redraw the text or else it will disappear after a
-        % subsequent call to Screen('Flip').
-        Screen('DrawText', window, 'Click to exit', 0, 0, screenInfo.blI);
-        mY = locs(indy(order(i)),indx(order(i)),1);
-        mX = locs(indy(order(i)),indx(order(i)),2);
-        % Draw the sprite at the new location.
-        DaqDOut(d,0,0);
-        DaqDOut(d,0,255);
-        DaqDOut(d,0,127);
-        while gratingFrameIndex < (ratio)*numFrames
-            Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
-            % Call Screen('Flip') to update the screen.  Note that calling
-            % 'Flip' after we have both erased and redrawn the sprite prevents
-            % the sprite from flickering.
-            Screen('Flip', window);
-            gratingFrameIndex = gratingFrameIndex + 1;
+    for repindex=1:nreps
+        for i=1:numel(order)
+            % ------ Bookkeeping Variables ------
+            gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
+            gratingFrameIndex = 1; % Which frame of the animation should we show?
+            %         oriIndex = indo(order(i));
+            % We need to redraw the text or else it will disappear after a
+            % subsequent call to Screen('Flip').
+            Screen('DrawText', window, 'Click to exit', 0, 0, screenInfo.blI);
+            mY = locs(indy(order(i)),indx(order(i)),1);
+            mX = locs(indy(order(i)),indx(order(i)),2);
+            % Draw the sprite at the new location.
+            DaqDOut(d,0,0);
+            DaqDOut(d,0,255);
+            DaqDOut(d,0,127);
+            while gratingFrameIndex < (ratio)*numFrames
+                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
+                % Call Screen('Flip') to update the screen.  Note that calling
+                % 'Flip' after we have both erased and redrawn the sprite prevents
+                % the sprite from flickering.
+                Screen('Flip', window);
+                gratingFrameIndex = gratingFrameIndex + 1;
+            end
+            DaqDOut(d,0,127);
+            DaqDOut(d,0,255);
+            DaqDOut(d,0,0);
+            while gratingFrameIndex < (ratio+1)*numFrames
+                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
+                % Call Screen('Flip') to update the screen.  Note that calling
+                % 'Flip' after we have both erased and redrawn the sprite prevents
+                % the sprite from flickering.
+                Screen('Flip', window);
+                gratingFrameIndex = gratingFrameIndex + 1;
+            end
+            %         outputSingleScan(daq,[0 1 0])
+            %         outputSingleScan(daq,[1 1 0])
+            %         outputSingleScan(daq,[0 1 0])
         end
-        DaqDOut(d,0,127);
-        DaqDOut(d,0,255);
-        DaqDOut(d,0,0);
-        while gratingFrameIndex < (ratio+1)*numFrames
-            Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
-            % Call Screen('Flip') to update the screen.  Note that calling
-            % 'Flip' after we have both erased and redrawn the sprite prevents
-            % the sprite from flickering.
-            Screen('Flip', window);
-            gratingFrameIndex = gratingFrameIndex + 1;
-        end
-        %         outputSingleScan(daq,[0 1 0])
-        %         outputSingleScan(daq,[1 1 0])
-        %         outputSingleScan(daq,[0 1 0])
     end
     
     for i=1:10
