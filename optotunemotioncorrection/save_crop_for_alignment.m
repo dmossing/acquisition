@@ -5,7 +5,10 @@ for i=1:numel(fns)
 		fname = fname(1:end-4);
 	end
     load([fname '.mat'])
-    [~, ~, rect] = crop(sbxreadpacked(fname,1,1), true);
+    imgtocrop = sbxreadpacked(fname,1,1);
+    [~, ~, rect] = crop(imgtocrop, true);
+%     [~, ~, rect] = crop(load2P([fname '.sbx'],'Frames',2), true);
+%     [~, ~, rect] = crop(sbxreadpacked(fname,1,1), true);
     %         rect = round([rect(3),rect(3)+rect(4),rect(1),rect(1)+rect(2)]);
     rect = [rect(2),rect(2)+rect(4),rect(1),rect(1)+rect(3)];
     rect(1) = max(rect(1),1);

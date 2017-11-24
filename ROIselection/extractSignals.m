@@ -189,6 +189,7 @@ elseif isstruct(MotionCorrect) % MCdata structure input
     MCdata = MotionCorrect;
     MotionCorrect = true;
 end
+MCdata.whichFrames = FrameIndex;
 
 
 %% Cycle through each ROI averaging pixels within each frame
@@ -264,7 +265,7 @@ else % No GPU
     end
     
     parfor_progress(numel(FrameIndex));
-    parfor findex = FrameIndex
+    for findex = FrameIndex %parfor
         
         % Load Frame
         [img, loadObj] = load2P(ImageFiles, 'Type', 'Direct', 'Frames', findex, 'Verbose', false); %direct

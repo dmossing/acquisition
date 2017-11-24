@@ -174,7 +174,8 @@ switch LoadType
         end
         
         % Load Images
-        Images = zeros(Config(1).Height, Config(1).Width, Config(1).Depth, numel(Channels), sum(numFrames), 'uint16');
+%         Images = zeros(Config(1).Height, Config(1).Width, Config(1).Depth, numel(Channels), sum(numFrames), 'uint16');
+        Images = zeros(Config(1).Height, Config(1).Width, 1, numel(Channels), sum(numFrames), 'uint16');
         startFrame = cumsum([1,numFrames(1:end-1)]);
         for index = 1:numFiles
             [~,~,loadObj.files(index).ext] = fileparts(ImageFiles{index});
