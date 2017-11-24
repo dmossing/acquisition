@@ -55,6 +55,14 @@ for i=1:numFrames
         ext = max(max(max(s)),abs(min(min(s))));
         G02=ext*((s>0)-(s<0));%.*g0;
     end
+%     if streq(method,'symmetric'),
+%         incmax = min(255-Bcol,Bcol);
+%         G = (floor(thiscontrast1*(incmax*G01)+thiscontrast2*(incmax*G02)+Bcol));
+%     elseif streq(method,'cut'),
+%         incmax = max(255-Bcol,Bcol);
+%         G = (floor(thiscontrast1*(incmax*G01)+thiscontrast2*(incmax*G02)+Bcol));
+%         G = max(G,0);G = min(G,255);
+%     end
     if streq(method,'symmetric'),
         incmax = min(255-Bcol,Bcol);
         G = (floor(thiscontrast1*(incmax*G01)+thiscontrast2*(incmax*G02)+Bcol));
