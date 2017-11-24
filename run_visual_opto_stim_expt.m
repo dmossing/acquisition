@@ -1,10 +1,10 @@
-function run_visual_stim_expt_generalized(varargin)
+function run_visual_opto_stim_expt(varargin)
 
 p = inputParser;
 p.addParameter('modality','2p');
 p.addParameter('animalid','Mfake');
 p.addParameter('depth','000');
-p.addParameter('orientations',[0 90]);
+p.addParameter('orientations',[nan 0 90]);
 p.addParameter('repetitions',10);
 p.addParameter('stimduration',1);
 p.addParameter('isi',3);
@@ -16,6 +16,9 @@ p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',[0.06 0.12 0.25 0.5]);
 p.addParameter('gen_stim_vars_fn',@gen_busse_stim_vars);
+p.addParameter('opto_duration',100);
+p.addParameter('opto_amplitude',3.0);
+p.addParameter('opto_targets',[nan 1:3]);
 p.parse(varargin{:});
 
 % choose parameters
@@ -107,6 +110,24 @@ else
     runpath = '//E:LF2P/ ... NEED TO FILL IN';
     fprintf(H_lf,sprintf('G%s/%s_%s_%s.dat', runfolder, base, depth, fileindex));
 end
+
+% prepare optogenetic stims
+%%%
+
+% "r<int>"      Set the SLM spot radius to <int> pixels,  eg, "r10"
+% "p<int>"      Set the pulse width of the stimulation to <int> msec; eg, "p20"
+% "s"           Stimulate (currently selected cell)
+% "l<float>"    Set SLM laser amplitude; eg, "l0.5" (float number between 0.0 and 5.0).      
+% "h"           Compute SLM phase of currently defined ROIs
+% "i<int>"   	Select ROI #i (you should have previously asked to compute
+% the phases)
+
+%%%
+fprintf(H_Scanbox,['p' num2str(uint16(opto_duration))])
+fprintf(H_Scanbox,['l' num2str(uint16(opto_amplitude))])
+fprintf(H_Scanbox,'r1')
+fprintf(H_Scanbox,'h');
+
 
 % set up running comp communication
 
@@ -257,7 +278,7 @@ terminate_udp(H_Run)
             %--
             Screen('DrawTexture',w,BG);
             Screen('DrawText', w, ['trial ' int2str(thisstim.trnum) '/' ...
-                int2str(allConds) 'repetition ' int2str(thisstim.itrial) '/'...
+                int2str(allConds) 'repetition ' int2str(thisstim.itrial) '/' ...
                 int2str(result.repetitions)], 0, 0, [255,0,0]);
             Screen('Flip', w);
             
@@ -281,6 +302,10 @@ terminate_udp(H_Run)
             DaqDOut(d,0,0);
             disp('stim on')
             tic
+            if ~isnan(thisstim.thisroi)
+                fprintf(H_Scanbox,['i' num2str(thisstim.thisroi)])
+                fprintf(H_Scanbox,'s')
+            end
             % show stimulus
             show_tex(wininfo,thisstim)
             %                 fprintf(H_Run,'')
