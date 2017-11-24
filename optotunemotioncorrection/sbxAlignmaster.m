@@ -33,15 +33,26 @@ function rect = sbxAlignmaster(fname,Depth,rect)
     if ~exist('Depth','var') || isempty(Depth)
         Depth = 1;
     end
-    Config = load2PConfig([fname,'.sbx']);
-    numDepths = Config.Depth;
+    load(fname,'info')
+    try
+        numDepths = info.otparam(3);
+    catch
+        numDepths = 1;
+    end
+    if info.channels==1
+        info.nchan = 2;
+    else
+        info.nchan = 1;
+    end
+    %Config = load2PConfig([fname,'.sbx']);
+    %numDepths = Config.Depth;
     if numDepths>1
         str = sprintf('_depth%d',Depth);
     else
         str = '';
     end
     
-    Frames = idDepth([fname,'.sbx'],'Depth',Depth)';    
+    Frames = idDepth([fname,'.sbx'],[],'Depth',Depth)';    
     if Depth==1
         Frames(1) = []; % throw out very first frame as it's wrong (blank row in T added in at end)
     end
@@ -52,7 +63,7 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     z = sbxreadpacked(fname,0,1);
 
-    szz = size(z);
+    szz = size(z) %;
 
     
 

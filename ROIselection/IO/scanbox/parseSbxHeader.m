@@ -103,7 +103,11 @@ end
 % config.Processing = {};
 % config.info = [];
 % config.MotionCorrected = false;
-config.Depth = 1; % current default
+try 
+    config.Depth = info.otparam(3); %should be (3), testing what happens if this goes back
+catch
+    config.Depth = 1; % current default
+end
 config.ZStepSize = 0; % current default
 config.Precision = 'uint16'; % default
 config.DimensionOrder = {'Channels','Width','Height','Frames','Depth'}; % default

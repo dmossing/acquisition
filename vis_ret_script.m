@@ -1,5 +1,5 @@
 %% load info
-filename = 'retinotopy_000.mat';
+filename = 'retinotopy_002.mat';
 load(filename)
 %%
 xray = zeros([size(avg_by_loc{1,1}) size(avg_by_loc)]);
@@ -14,4 +14,5 @@ for i=1:ny
         xray(:,:,i,j) = imgaussfilt(avg_by_loc{i,j},5);
     end
 end
+figure(1)
 visualize_retinotopy(maximg,xray)
