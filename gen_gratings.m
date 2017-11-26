@@ -1,4 +1,5 @@
-function tex = gen_gratings(wininfo,gratingInfo,thisstim)
+% function [tex,trigonframe] = gen_gratings(wininfo,gratingInfo,thisstim)
+function thisstim = gen_gratings(wininfo,gratingInfo,thisstim)
 gf = gratingInfo.gf;%.Gaussian width factor 5: reveal all .5 normal fall off
 Bcol = gratingInfo.Bcol; % Background 0 black, 255 white
 method = gratingInfo.method;
@@ -60,8 +61,11 @@ for i=1:numFrames
     end
 %     toc
 %     tic
-    tex(i) = Screen('MakeTexture', w, T);
+%     tex(i) = Screen('MakeTexture', w, T);
 %     toc
+    thisstim.tex(i) = Screen('MakeTexture', w, T);
 end
+thisstim.trigonframe = false(numFrames,1);
+thisstim.movieFrameIndices = mod(0:(thisstim.movieDurationFrames-1), numFrames) + 1;
 end
 

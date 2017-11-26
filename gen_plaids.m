@@ -1,4 +1,5 @@
-function tex = gen_plaids(wininfo,result,thisstim)
+% function [tex,trigonframe] = gen_plaids(wininfo,result,thisstim)
+function thisstim = gen_plaids(wininfo,result,thisstim)
 gf = gratingInfo.gf;%.Gaussian width factor 5: reveal all .5 normal fall off
 Bcol = gratingInfo.Bcol; % Background 0 black, 255 white
 method = gratingInfo.method;
@@ -76,8 +77,11 @@ for i=1:numFrames
     T(y0:y0+size(G,2)-1,x0:x0+size(G,2)-1) = G;
 %     toc
 %     tic
-    tex(i) = Screen('MakeTexture', w, T);
+%     tex(i) = Screen('MakeTexture', w, T);
+    thisstim.tex(i) = Screen('MakeTexture', w, T);
 %     toc
 end
+thisstim.trigonframe = false(numFrames,1);
+thisstim.movieFrameIndices = mod(0:(thisstim.movieDurationFrames-1), numFrames) + 1;
 end
 

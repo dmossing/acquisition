@@ -38,7 +38,7 @@ gratingInfo.spFreq = result.sFreqs*ones(1,allTrials);
 
 result.gratingInfo = gratingInfo;
 
-function thisstim = gen_busse_stim(gratingInfo,trnum)
+function thisstim = gen_busse_stim(gratingInfo,trnum,movieDurationFrames)
 bin = (gratingInfo.widthLUT(:,1) == gratingInfo.Size(trnum));
 thisstim.thiswidth = gratingInfo.widthLUT(bin,2);
 thisstim.thissize = gratingInfo.Size(trnum);
@@ -49,6 +49,9 @@ thisstim.thiscontrast2 = gratingInfo.Contrast2(trnum);
 thisstim.thisdeg1 = gratingInfo.Orientation1(trnum);
 thisstim.thisdeg2 = gratingInfo.Orientation2(trnum);
 thisstim.trnum = trnum;
+numFrames = numel(thisstim.tex);
+thisstim.movieDurationFrames = movieDurationFrames;
+thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
 
 % function tex = gen_plaids(wininfo,result,thisstim)
 % gf = gratingInfo.gf;%.Gaussian width factor 5: reveal all .5 normal fall off

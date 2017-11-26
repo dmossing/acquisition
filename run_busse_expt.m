@@ -229,10 +229,11 @@ else
             thisstim = getStim(result.gratingInfo,trnum);
             thisstim.itrial = itrial;
             
-            thisstim.tex = gen_plaids(wininfo,result.gratingInfo,thisstim);
-            numFrames = numel(thisstim.tex);
+%             thisstim.tex = gen_plaids(wininfo,result.gratingInfo,thisstim);
             thisstim.movieDurationFrames = movieDurationFrames;
-            thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
+            thisstim = gen_plaids(wininfo,result.gratingInfo,thisstim);
+%             numFrames = numel(thisstim.tex);
+%             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
             
             result = deliver_stim(result,wininfo,thisstim,d);
             

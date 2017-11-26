@@ -192,13 +192,14 @@ else
 %             result = pickNext(result,trnum,thiscond);
             % end save information
             
-            thisstim = stim_vars.gen_stim_fn(result.gratingInfo,trnum);
+            thisstim = stim_vars.gen_stim_fn(result.gratingInfo,trnum,movieDurationFrames);
             thisstim.itrial = itrial;
             
-            thisstim.tex = stim_vars.gen_tex_fn(wininfo,result.gratingInfo,thisstim);
-            numFrames = numel(thisstim.tex);
-            thisstim.movieDurationFrames = movieDurationFrames;
-            thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
+            thisstim = stim_vars.gen_tex_fn(wininfo,result.gratingInfo,thisstim);
+%             [thisstim.tex,thisstim.trigonframe] = stim_vars.gen_tex_fn(wininfo,result.gratingInfo,thisstim);
+%             numFrames = numel(thisstim.tex);
+%             thisstim.movieDurationFrames = movieDurationFrames;
+%             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
             
             result = deliver_stim(result,wininfo,thisstim,d);
             
@@ -276,19 +277,22 @@ terminate_udp(H_Run)
             stimstart  =  GetSecs-t0;
             
             % send stim on trigger
-            DaqDOut(d,0,0);
-            DaqDOut(d,0,255);
-            DaqDOut(d,0,0);
-            disp('stim on')
             tic
-            % show stimulus
-            show_tex(wininfo,thisstim)
-            %                 fprintf(H_Run,'')
+            show_tex_trig(wininfo,thisstim,d)
             toc
-            
-            DaqDOut(d,0,0);
-            DaqDOut(d,0,255);
-            DaqDOut(d,0,0);
+%             DaqDOut(d,0,0);
+%             DaqDOut(d,0,255);
+%             DaqDOut(d,0,0);
+%             disp('stim on')
+%             tic
+%             % show stimulus
+%             show_tex(wininfo,thisstim)
+%             %                 fprintf(H_Run,'')
+%             toc
+%             
+%             DaqDOut(d,0,0);
+%             DaqDOut(d,0,255);
+%             DaqDOut(d,0,0);
             disp('stim off')
             
             stimt = GetSecs-t0-stimstart;

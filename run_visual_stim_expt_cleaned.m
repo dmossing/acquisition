@@ -11,8 +11,8 @@ p.addParameter('isi',3);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
 p.addParameter('sizes',25);
-p.addParameter('sFreqs',0.04); % cyc/vis deg
-p.addParameter('tFreqs',2); % cyc/sec
+p.addParameter('sFreqs',0.08); % cyc/vis deg
+p.addParameter('tFreqs',1); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',1);
 p.parse(varargin{:});
@@ -228,10 +228,11 @@ else
             thisstim = getStim(result.gratingInfo,trnum);
             thisstim.itrial = itrial;
             
-            thisstim.tex = gen_gratings(wininfo,result.gratingInfo,thisstim);
-            numFrames = numel(thisstim.tex);
+%             thisstim.tex = gen_gratings(wininfo,result.gratingInfo,thisstim);
+%             numFrames = numel(thisstim.tex);
             thisstim.movieDurationFrames = movieDurationFrames;
-            thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
+%             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
+            thisstim = gen_gratings(wininfo,result.gratingInfo,thisstim);
             
             result = deliver_stim(result,wininfo,thisstim,d);
             

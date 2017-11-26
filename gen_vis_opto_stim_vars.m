@@ -36,7 +36,7 @@ gratingInfo.Contrast = result.contrast*ones(1,allTrials);
 
 result.gratingInfo = gratingInfo;
 
-function thisstim = gen_vis_opto_stim(gratingInfo,trnum)
+function thisstim = gen_vis_opto_stim(gratingInfo,trnum,movieDurationFrames)
 bin = (gratingInfo.widthLUT(:,1) == gratingInfo.Size(trnum));
 thisstim.thiswidth = gratingInfo.widthLUT(bin,2);
 thisstim.thissize = gratingInfo.Size(trnum);
@@ -46,3 +46,4 @@ thisstim.thiscontrast = gratingInfo.Contrast(trnum);
 thisstim.thisdeg = gratingInfo.Orientation(trnum);
 thisstim.thisroi = gratingInfo.OptoROI(trnum);
 thisstim.trnum = trnum;
+thisstim.movieDurationFrames = movieDurationFrames;
