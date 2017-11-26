@@ -20,6 +20,9 @@ thissize = thisstim.thissize;
 thiscontrast = thisstim.thiscontrast;
 thisfreq = thisstim.thisfreq;
 thisspeed = thisstim.thisspeed;
+% if isnan(thisdeg) % kludge to allow for nan orientation to mean gray screen!
+%     thiscontrast = 0;
+% end
 
 x0 = floor(xRes/2 + xposStim*PixperDeg - thissize.*PixperDeg/2);
 y0 = floor(yRes/2 - yposStim*PixperDeg - thissize.*PixperDeg/2);
@@ -52,7 +55,9 @@ for i=1:numFrames
     end
     
     T = bg;
-    T(y0:y0+size(G,2)-1,x0:x0+size(G,2)-1) = G;
+    if ~isnan(thisdeg) % kludge to allow for nan orientation to mean gray screen!
+        T(y0:y0+size(G,2)-1,x0:x0+size(G,2)-1) = G;
+    end
 %     toc
 %     tic
     tex(i) = Screen('MakeTexture', w, T);

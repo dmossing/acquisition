@@ -14,8 +14,8 @@ p.addParameter('sizes',25);
 p.addParameter('sFreqs',0.04); % cyc/vis deg
 p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
-p.addParameter('contrast',[0.06 0.12 0.25 0.5]);
-p.addParameter('gen_stim_vars_fn',@gen_busse_stim_vars);
+p.addParameter('contrast',[1]);
+p.addParameter('gen_stim_vars_fn',@gen_vis_opto_stim_vars);
 p.addParameter('opto_duration',100);
 p.addParameter('opto_amplitude',3.0);
 p.addParameter('opto_targets',[nan 1:3]);
@@ -25,7 +25,7 @@ p.parse(varargin{:});
 
 result = p.Results;
 
-stim_vars = gen_stim_vars_fn();
+stim_vars = result.gen_stim_vars_fn();
 
 isi = result.isi;
 stimduration = result.stimduration;
@@ -42,6 +42,7 @@ movieDurationSecs = result.stimduration;
 movieDurationFrames = round(movieDurationSecs * wininfo.frameRate);
 
 PatchRadiusPix = ceil(result.sizes.*wininfo.PixperDeg/2); % radius!!
+result.PatchRadiusPix = PatchRadiusPix;
 
 x0 = floor(wininfo.xRes/2 + (wininfo.xposStim - result.sizes/2)*wininfo.PixperDeg);
 y0 = floor(wininfo.yRes/2 + (-wininfo.yposStim - result.sizes/2)*wininfo.PixperDeg);
@@ -123,8 +124,8 @@ end
 % the phases)
 
 %%%
-fprintf(H_Scanbox,['p' num2str(uint16(opto_duration))])
-fprintf(H_Scanbox,['l' num2str(uint16(opto_amplitude))])
+fprintf(H_Scanbox,['p' num2str(uint16(result.opto_duration))])
+fprintf(H_Scanbox,['l' num2str(uint16(result.opto_amplitude))])
 fprintf(H_Scanbox,'r1')
 fprintf(H_Scanbox,'h');
 

@@ -5,7 +5,7 @@ busse.gen_stim_fn = @gen_vis_opto_stim;
 busse.gen_tex_fn = @gen_gratings;
 
 function conds = gen_vis_opto_conds(result)
-nConds  =  [1+length(result.orientations) 1+length(result.opto_target_no)]; 
+nConds  =  [length(result.orientations) length(result.opto_targets)]; 
 % one extra for no vis stim, one extra for no opto stim
 allConds  =  prod(nConds);
 conds  =  makeAllCombos(result.orientations,result.opto_targets);
@@ -15,7 +15,7 @@ gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
 gratingInfo.Bcol = 128; % Background 0 black, 255 white
 gratingInfo.method = 'symmetric';
 gratingInfo.gtype = 'box';
-width  =  PatchRadiusPix;
+width  =  result.PatchRadiusPix;
 gratingInfo.widthLUT = [result.sizes(:) width(:)];
 
 allConds = size(conds,2);
@@ -27,11 +27,12 @@ end
 
 allTrials = prod(size(allthecondinds));
 
-gratingInfo.Orientation = result.orientations(allthecondinds(:)');
-gratingInfo.OptoROI = result.opto_targets(allthecondinds(:)');
+gratingInfo.Orientation = conds(1,allthecondinds(:)');
+gratingInfo.OptoROI = conds(2,allthecondinds(:)');
 gratingInfo.Size = result.sizes*ones(1,allTrials);
 gratingInfo.tFreq = result.tFreqs*ones(1,allTrials);
 gratingInfo.spFreq = result.sFreqs*ones(1,allTrials);
+gratingInfo.Contrast = result.contrast*ones(1,allTrials);
 
 result.gratingInfo = gratingInfo;
 
