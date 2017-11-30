@@ -89,8 +89,14 @@ function Z = sbxreadpacked(fname,offset,nframes)
                 factor = 2;
 
         end
-
-
+        
+        %%% TESTING
+        
+        if ~info.scanmode % quick fix for bidirectional scan
+            info.recordsPerBuffer = info.recordsPerBuffer*2;
+        end
+        
+        %%%
 
         %info.fid = fopen([fname0 '.sbx']);
 
