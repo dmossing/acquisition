@@ -97,7 +97,8 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     end
 
-    s = reshape(sqrt(1/numFrames*(vs - sum(ms.^2,2))),szz);
+    s = reshape(sqrt(max(1/info.max_idx*(vs - sum(ms.^2,2)),0)),szz); % fix to prevent negative values
+%    s = reshape(sqrt(1/numFrames*(vs - sum(ms.^2,2))),szz);
     s = real(s); % occurs when constant 0 is acquired at some pixel on the frame; imaginary number caused by sqrt of negative number above (added by Evan)
     
     if isempty(rect)
