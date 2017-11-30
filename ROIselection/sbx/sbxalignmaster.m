@@ -46,7 +46,7 @@ function sbxalignmaster(fname)
 
     
 
-    s = reshape(sqrt(1/info.max_idx*(vs - sum(ms.^2,2))),szz);
+    s = reshape(sqrt(max(1/info.max_idx*(vs - sum(ms.^2,2)),0)),szz);
     
 %     thestd = zeros(size(s));
 %     for i=1:size(s,3)

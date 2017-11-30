@@ -98,7 +98,7 @@ function Z = sbxreadpacked(fname,offset,nframes)
         
         %%%
 
-        %info.fid = fopen([fname0 '.sbx']);
+        info.fid = fopen([fname0 '.sbx']);
 
         d = dir([fname0 '.sbx']);
 
