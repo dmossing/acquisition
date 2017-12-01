@@ -4,7 +4,7 @@ p = inputParser;
 p.addParameter('modality','2p');
 p.addParameter('animalid','Mfake');
 p.addParameter('depth','000');
-p.addParameter('orientations',[0 90]);
+p.addParameter('orientations',[nan 0 90]);
 p.addParameter('repetitions',10);
 p.addParameter('stimduration',1);
 p.addParameter('isi',3);
@@ -12,17 +12,18 @@ p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
 p.addParameter('sizes',25);
 p.addParameter('sFreqs',0.04); % cyc/vis deg
-p.addParameter('tFreqs',2); % cyc/sec
+p.addParameter('tFreqs',1); % cyc/sec
 p.addParameter('position',[0,0]);
-p.addParameter('contrast',[0.06 0.12 0.25 0.5]);
+p.addParameter('contrast',1);
 p.addParameter('gen_stim_vars_fn',@gen_busse_stim_vars);
+p.addParameter('expt_info',[]);
 p.parse(varargin{:});
 
 % choose parameters
 
 result = p.Results;
 
-stim_vars = gen_stim_vars_fn();
+stim_vars = result.gen_stim_vars_fn();
 
 isi = result.isi;
 stimduration = result.stimduration;
@@ -39,6 +40,7 @@ movieDurationSecs = result.stimduration;
 movieDurationFrames = round(movieDurationSecs * wininfo.frameRate);
 
 PatchRadiusPix = ceil(result.sizes.*wininfo.PixperDeg/2); % radius!!
+result.PatchRadiusPix = PatchRadiusPix;
 
 x0 = floor(wininfo.xRes/2 + (wininfo.xposStim - result.sizes/2)*wininfo.PixperDeg);
 y0 = floor(wininfo.yRes/2 + (-wininfo.yposStim - result.sizes/2)*wininfo.PixperDeg);
@@ -50,7 +52,8 @@ end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/mossing/LF2P/StimData/';
+% stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/mossing/LF2P/StimData/';
+stimFolderRemote = '/home/visual-stim/excitation/visual_stim/';
 stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
@@ -70,7 +73,8 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
+runpath = '/home/visual-stim/excitation/running/';
+% runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
 if ~exist(runfolder,'dir')
     mkdir(runfolder)
