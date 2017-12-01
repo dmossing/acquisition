@@ -44,6 +44,7 @@ function rect = sbxAlignmaster(fname,Depth,rect)
     else
         info.nchan = 1;
     end
+    clear info
     %Config = load2PConfig([fname,'.sbx']);
     %numDepths = Config.Depth;
     if numDepths>1
@@ -331,7 +332,7 @@ function rect = sbxAlignmaster(fname,Depth,rect)
 
     parfor jj = 1:numFrames % parfor
 
-        z = double(sbxreadpacked(fname,Frames(1,jj)-1,1));
+        z = double(sbxchan0(sbxreadpacked(fname,Frames(1,jj)-1,1)));
         if ~isempty(rect) %Evan
             z(~mask) = 0;
         end
