@@ -1,5 +1,5 @@
 % function [tex,trigonframe] = gen_plaids(wininfo,result,thisstim)
-function thisstim = gen_plaids(wininfo,result,thisstim)
+function thisstim = gen_plaids(wininfo,gratingInfo,thisstim)
 gf = gratingInfo.gf;%.Gaussian width factor 5: reveal all .5 normal fall off
 Bcol = gratingInfo.Bcol; % Background 0 black, 255 white
 method = gratingInfo.method;

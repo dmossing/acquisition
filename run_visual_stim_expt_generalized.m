@@ -38,6 +38,8 @@ wininfo = gen_wininfo(result);
 
 movieDurationSecs = result.stimduration;
 movieDurationFrames = round(movieDurationSecs * wininfo.frameRate);
+result.movieDurationFrames = movieDurationFrames;
+result.frameRate = wininfo.frameRate;
 
 PatchRadiusPix = ceil(result.sizes.*wininfo.PixperDeg/2); % radius!!
 result.PatchRadiusPix = PatchRadiusPix;
