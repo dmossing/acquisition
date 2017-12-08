@@ -11,7 +11,7 @@ p.addParameter('isi',3);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
 p.addParameter('sizes',25);
-p.addParameter('sFreqs',0.04); % cyc/vis deg
+p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',1); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',1);
@@ -75,7 +75,7 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '/home/visual-stim/excitation/running/';
+runpath = 'Z:/mossing/running/';
 % runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
 if ~exist(runfolder,'dir')

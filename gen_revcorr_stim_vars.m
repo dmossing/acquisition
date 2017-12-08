@@ -1,7 +1,7 @@
 function revcorr = gen_revcorr_stim_vars()
 revcorr.gen_result_fn = @gen_revcorr_result;
-revcorr.gen_conds_fn = @gen_revcorr_stim;
-revcorr.gen_stim_fn = @gen_revcorr_conds;
+revcorr.gen_conds_fn = @gen_revcorr_conds;
+revcorr.gen_stim_fn = @gen_revcorr_stim;
 revcorr.gen_tex_fn = @gen_revcorr_tex;
 
 function conds = gen_revcorr_conds(result)
@@ -12,7 +12,7 @@ gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
 gratingInfo.Bcol = 128; % Background 0 black, 255 white
 gratingInfo.method = 'symmetric';
 gratingInfo.gtype = 'box';
-width  =  PatchRadiusPix;
+width  =  result.PatchRadiusPix;
 gratingInfo.widthLUT = [result.sizes(:) width(:)];
 
 allConds = size(conds,2);
@@ -35,10 +35,11 @@ gratingInfo.Size = result.sizes*ones(1,allTrials);
 gratingInfo.spFreq = result.sFreqs*ones(1,allTrials);
 gratingInfo.oriRes = numel(result.orientations);
 gratingInfo.phaseRes = result.expt_info.phase_res;
-gratingInfo.showEachFor = found(result.frameRate/result.expt_info.stim_rate);
+gratingInfo.showEachFor = round(result.frameRate/result.expt_info.stim_rate);
 gratingInfo.stimno = round(result.stimduration * result.expt_info.stim_rate);
 gratingInfo.oriInd = datasample(1:gratingInfo.oriRes,gratingInfo.stimno);
 gratingInfo.phaseInd = datasample(1:gratingInfo.phaseRes,gratingInfo.stimno);
+gratingInfo.tFreq = result.frameRate/result.expt_info.phase_res;
 
 result.gratingInfo = gratingInfo;
 
@@ -49,19 +50,24 @@ thisstim.thissize = gratingInfo.Size(trnum);
 thisstim.thisfreq = gratingInfo.spFreq(trnum);
 thisstim.thiscontrast = gratingInfo.Contrast(trnum);
 thisstim.trnum = trnum;
-numFrames = numel(thisstim.tex);
+% numFrames = numel(thisstim.tex);
 thisstim.movieDurationFrames = movieDurationFrames;
+thisstim.thisspeed = gratingInfo.tFreq;
 linearized = (gratingInfo.oriInd-1)*gratingInfo.phaseRes+gratingInfo.phaseInd;
 linearized = repmat(linearized,gratingInfo.showEachFor,1);
 % order is orientation changes slowly, phase changes quickly.
 thisstim.movieFrameIndices = linearized(:)';
+trigs = [ones(1,gratingInfo.stimno); zeros(gratingInfo.showEachFor-1,gratingInfo.stimno)];
+thisstim.trigonframe = trigs(:);
 
 
 function thisstim = gen_revcorr_tex(wininfo,gratingInfo,thisstim)
 thisstim.thisdeg = gratingInfo.Orientation(1);
-tex = gen_gratings(wininfo,gratingInfo,thisstim)';
-for i=2:gratingInfo.oriInd
-    tex(:,i) = gen_gratings(wininfo,gratingInfo,thisstim);
+stima = gen_gratings(wininfo,gratingInfo,thisstim);
+tex = stima.tex(:);
+for i=2:gratingInfo.oriRes
+    thisstim.thisdeg = gratingInfo.Orientation(i);
+    stima = gen_gratings(wininfo,gratingInfo,thisstim);
+    tex = [tex stima.tex(:)];
 end
-tex = tex(:)';
-thisstim.tex = tex;
+thisstim.tex = tex(:)';

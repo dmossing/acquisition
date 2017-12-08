@@ -1,7 +1,7 @@
 function busse = gen_busse_stim_vars()
 busse.gen_result_fn = @gen_busse_result;
-busse.gen_conds_fn = @gen_busse_stim;
-busse.gen_stim_fn = @gen_busse_conds;
+busse.gen_conds_fn = @gen_busse_conds;
+busse.gen_stim_fn = @gen_busse_stim;
 busse.gen_tex_fn = @gen_plaids;
 
 function conds = gen_busse_conds(result)
