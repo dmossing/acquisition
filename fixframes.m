@@ -11,7 +11,7 @@ for i=4%1:depthno
     load([fns{i} '.mat'],'info')
     if ~isfield(info,'frameCorrected') || ~info.frameCorrected
         info.frame = ceil(info.frame/depthno);
-        info.frameCorrected = true;
+        info.frameCorrecte = true;
         save([fns{i} '.mat'],'info','-append')
     end
 end
