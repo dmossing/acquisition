@@ -1,21 +1,11 @@
-function run_visual_opto_stim_expt(varargin)
+function run_opto_stim_expt(varargin)
 
 p = inputParser;
 p.addParameter('modality','2p');
 p.addParameter('animalid','Mfake');
 p.addParameter('depth','000');
-p.addParameter('orientations',[nan 0 90]);
 p.addParameter('repetitions',10);
-p.addParameter('stimduration',1);
 p.addParameter('isi',3);
-p.addParameter('DScreen',15);
-p.addParameter('VertScreenSize',27);
-p.addParameter('sizes',25);
-p.addParameter('sFreqs',0.04); % cyc/vis deg
-p.addParameter('tFreqs',2); % cyc/sec
-p.addParameter('position',[0,0]);
-p.addParameter('contrast',[1]);
-p.addParameter('gen_stim_vars_fn',@gen_vis_opto_stim_vars);
 p.addParameter('opto_duration',100);
 p.addParameter('opto_amplitude',3.0);
 p.addParameter('opto_targets',[nan 1:3]);
@@ -25,32 +15,13 @@ p.parse(varargin{:});
 
 result = p.Results;
 
-stim_vars = result.gen_stim_vars_fn();
-
 isi = result.isi;
-stimduration = result.stimduration;
 
 % create all stimulus conditions from the single parameter vectors
 conds = stim_vars.gen_conds_fn(result);
 allConds = size(conds,2);
 
 assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
-
-wininfo = gen_wininfo(result);
-
-movieDurationSecs = result.stimduration;
-movieDurationFrames = round(movieDurationSecs * wininfo.frameRate);
-
-PatchRadiusPix = ceil(result.sizes.*wininfo.PixperDeg/2); % radius!!
-result.PatchRadiusPix = PatchRadiusPix;
-
-x0 = floor(wininfo.xRes/2 + (wininfo.xposStim - result.sizes/2)*wininfo.PixperDeg);
-y0 = floor(wininfo.yRes/2 + (-wininfo.yposStim - result.sizes/2)*wininfo.PixperDeg);
-
-if ~isempty(find(x0<1)) | ~isempty(find(y0<1))
-    disp('too big for the monitor, dude! try other parameters');
-    return;
-end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
@@ -124,8 +95,6 @@ end
 % the phases)
 
 %%%
-fprintf(H_Scanbox,['p' num2str(uint16(result.opto_duration))])
-fprintf(H_Scanbox,['l' num2str(result.opto_amplitude)])
 fprintf(H_Scanbox,'r1')
 fprintf(H_Scanbox,'h');
 
@@ -155,41 +124,16 @@ fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
 d = DaqFind;
 err = DaqDConfigPort(d,0,0);
 
-AssertOpenGL;
-
 result = stim_vars.gen_result_fn(result,conds);
 
-load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
-Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
-
-Screen('DrawTexture',wininfo.w, wininfo.BG);
-Screen('TextFont',wininfo.w, 'Courier New');
-Screen('TextSize',wininfo.w, 14);
-Screen('TextStyle', wininfo.w, 1+2);
-Screen('DrawText', wininfo.w, strcat(num2str(allConds),' Conditions__',...
-    num2str(result.repetitions),' Repeats__',...
-    num2str(allConds*result.repetitions*(isi+stimduration)/60),...
-    ' min estimated Duration.'), 60, 50, [255 128 0]);
-Screen('DrawText', wininfo.w, strcat('Filename:',fnameLocal,...
-    '    Hit any key to continue / q to abort.'), 60, 70, [255 128 0]);
-Screen('Flip',wininfo.w);
-
-FlushEvents;
-[kinp,tkinp] = GetChar;
 if kinp == 'q'|kinp == 'Q',
-    Screen('CloseAll');
-    Priority(0);
 else
     %     outputSingleScan(daq,[0 1 0]);
     % start imaging
     if strcmp(result.modality,'2p')
         fprintf(H_Scanbox,'G'); %go
     end
-    pause(5);
-    
-    Screen('DrawTexture',wininfo.w, wininfo.BG);
-    Screen('Flip', wininfo.w);
-    result.starttime  =  datestr(now);
+    pause(3);
     
     t0  =  GetSecs;
     trnum = 0;
@@ -214,15 +158,10 @@ else
 %             result = pickNext(result,trnum,thiscond);
             % end save information
             
-            thisstim = stim_vars.gen_stim_fn(result.gratingInfo,trnum);
+            thisstim = stim_vars.gen_stim_fn(result.roiInfo,trnum);
             thisstim.itrial = itrial;
             
-            thisstim.tex = stim_vars.gen_tex_fn(wininfo,result.gratingInfo,thisstim);
-            numFrames = numel(thisstim.tex);
-            thisstim.movieDurationFrames = movieDurationFrames;
-            thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
-            
-            result = deliver_stim(result,wininfo,thisstim,d);
+            result = deliver_stim(result,thisstim,d);
             
             [keyIsDown, secs, keyCode] = KbCheck;
             if keyIsDown & KbName(keyCode) == 'p'
@@ -233,22 +172,11 @@ else
     end
     
     result.stimParams = conds(:,Condnum);
-    result.dispInfo.xRes  =  wininfo.xRes; 
-    result.dispInfo.yRes  =  wininfo.yRes;
-    result.dispInfo.DScreen  =  result.DScreen; 
-    result.dispInfo.VertScreenSize  =  result.VertScreenSize;    
     
     save(fnameLocal, 'result');
     save(fnameRemote, 'result');
     
-    Screen('DrawTexture',wininfo.w,wininfo.BG);
-    Screen('DrawText', wininfo.w, sprintf('Done. Press any key.', 300,40,[255 0 0]));
-    Screen('Flip', wininfo.w);
-    
-    FlushEvents;
     [kinp,tkinp] = GetChar;
-    Screen('CloseAll');
-    Priority(0);
     
 end
 
@@ -268,33 +196,13 @@ terminate_udp(H_Run)
         delete(handle);
     end
 
-    function result = deliver_stim(result,wininfo,thisstim,d)
-            w = wininfo.w;
-            BG = wininfo.BG;
+    function result = deliver_stim(result,thisstim,d)
             prestimtimems = 0;
-            
-            priorityLevel = MaxPriority(w);
-            Priority(priorityLevel);
-            
-            %--
-            Screen('DrawTexture',w,BG);
-            Screen('DrawText', w, ['trial ' int2str(thisstim.trnum) '/' ...
-                int2str(allConds) 'repetition ' int2str(thisstim.itrial) '/' ...
-                int2str(result.repetitions)], 0, 0, [255,0,0]);
-            Screen('Flip', w);
-            
+                        
             WaitSecs(max(0, result.isi-((GetSecs-t0)-trialstart)));
             
-            Screen('DrawTexture',w,BG);
-            fliptime  =  Screen('Flip', w);
             WaitSecs(max(0,prestimtimems/1000));
             
-            % last flip before movie starts
-            Screen('DrawTexture',w,BG);
-            fliptime  =  Screen('Flip', w);
-            result.timestamp(thisstim.trnum)  =  fliptime - t0;
-            
-            %             disp(['trnum: ' num2str(trnum) '   ts: ' num2str(result.timestamp(trnum))]);
             stimstart  =  GetSecs-t0;
             
             % send stim on trigger
@@ -304,12 +212,11 @@ terminate_udp(H_Run)
             disp('stim on')
             tic
             if ~isnan(thisstim.thisroi)
+                fprintf(H_Scanbox,['p' num2str(uint16(thisstim.thisduration))])
+                fprintf(H_Scanbox,['l' num2str(thisstim.thisamplitude)])
                 fprintf(H_Scanbox,['i' num2str(thisstim.thisroi)])
                 fprintf(H_Scanbox,'s')
             end
-            % show stimulus
-            show_tex(wininfo,thisstim)
-            %                 fprintf(H_Run,'')
             toc
             
             DaqDOut(d,0,0);
@@ -318,8 +225,5 @@ terminate_udp(H_Run)
             disp('stim off')
             
             stimt = GetSecs-t0-stimstart;
-            Screen('DrawTexture',w,BG);
-            Screen('Flip', w);
-            Screen('Close',thisstim.tex(:));
     end
 end
