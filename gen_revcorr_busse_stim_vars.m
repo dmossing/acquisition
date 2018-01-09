@@ -5,9 +5,7 @@ revcorr.gen_stim_fn = @gen_revcorr_stim;
 revcorr.gen_tex_fn = @gen_revcorr_tex;
 
 function conds = gen_revcorr_conds(result)
-conds  =  makeAllCombos([0 result.contrast 1],[0 result.contrast 1]);
-conds(:,conds(1,:) == 1 & conds(2,:) ~= 0) = [];
-conds(:,conds(1,:) ~= 0 & conds(2,:) == 1) = [];
+conds = zeros(1,result.repetitions);
 
 function result = gen_revcorr_result(result,conds)
 gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
@@ -19,21 +17,25 @@ gratingInfo.widthLUT = [result.sizes(:) width(:)];
 
 allConds = size(conds,2);
 
-allTrials = prod(size(allthecondinds));
+% allTrials = prod(size(allthecondinds));
 
-gratingInfo.Contrast = result.contrast*ones(1,allTrials); %conds(1,allthecondinds(:));
+% gratingInfo.Contrast = result.contrast*ones(1,allTrials); %conds(1,allthecondinds(:));
 % gratingInfo.Contrast = conds(2,allthecondinds(:));
 
-gratingInfo.Contrast1 = conds(1,:);
-gratingInfo.Contrast2 = conds(2,:);
-gratingInfo.Orientation1 = result.orientations(1);
-gratingInfo.Orientation2 = result.orientations(2);
+conds1  =  makeAllCombos([0 result.contrast 1],[0 result.contrast 1]);
+conds1(:,conds1(1,:) == 1 & conds1(2,:) ~= 0) = [];
+conds1(:,conds1(1,:) ~= 0 & conds1(2,:) == 1) = [];
+
+gratingInfo.Contrast1 = conds1(1,:);
+gratingInfo.Contrast2 = conds1(2,:);
+gratingInfo.Orientation1 = result.orientations(1)*ones(1,result.repetitions);
+gratingInfo.Orientation2 = result.orientations(2)*ones(1,result.repetitions);
 % gratingInfo.Orientation = result.orientations(2)*ones(1,allTrials);
-gratingInfo.Size = result.sizes;
+gratingInfo.Size = result.sizes*ones(1,result.repetitions);
 % gratingInfo.tFreq = result.tFreqs*ones(1,allTrials);
-gratingInfo.spFreq = result.sFreqs;
+gratingInfo.spFreq = result.sFreqs*ones(1,result.repetitions);
 % gratingInfo.oriRes = numel(result.orientations);
-gratingInfo.nCombos = size(conds,2);
+gratingInfo.nCombos = size(conds1,2);
 gratingInfo.phaseRes = result.expt_info.phase_res;
 gratingInfo.showEachFor = round(result.frameRate/result.expt_info.stim_rate);
 gratingInfo.stimno = round(result.stimduration * result.expt_info.stim_rate);
@@ -53,7 +55,7 @@ thisstim.trnum = trnum;
 % numFrames = numel(thisstim.tex);
 thisstim.movieDurationFrames = movieDurationFrames;
 thisstim.thisspeed = gratingInfo.tFreq;
-linearized = (gratingInfo.oriInd-1)*gratingInfo.phaseRes+gratingInfo.phaseInd;
+linearized = (gratingInfo.comboInd-1)*gratingInfo.phaseRes+gratingInfo.phaseInd;
 linearized = repmat(linearized,gratingInfo.showEachFor,1);
 % order is orientation changes slowly, phase changes quickly.
 thisstim.movieFrameIndices = linearized(:)';
@@ -66,9 +68,9 @@ thisstim.thisdeg1 = gratingInfo.Orientation1;
 thisstim.thisdeg2 = gratingInfo.Orientation2;
 thisstim.thiscontrast1 = gratingInfo.Contrast1(1);
 thisstim.thiscontrast2 = gratingInfo.Contrast2(1);
-stima = gen_gratings(wininfo,gratingInfo,thisstim);
+stima = gen_plaids(wininfo,gratingInfo,thisstim);
 tex = stima.tex(:);
-for i=2:gratingInfo.oriRes
+for i=2:gratingInfo.nCombos
     thisstim.thiscontrast1 = gratingInfo.Contrast1(i);
     thisstim.thiscontrast2 = gratingInfo.Contrast2(i);
     stima = gen_plaids(wininfo,gratingInfo,thisstim);
