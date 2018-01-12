@@ -7,13 +7,18 @@ p.addParameter('depth','000');
 p.addParameter('repetitions',10);
 p.addParameter('isi',3);
 p.addParameter('opto_duration',100);
-p.addParameter('opto_amplitude',3.0);
+p.addParameter('opto_amplitude',1.0);
 p.addParameter('opto_targets',[nan 1:3]);
+p.addParameter('gen_stim_vars_fn',@gen_opto_stim_vars);
 p.parse(varargin{:});
 
 % choose parameters
 
 result = p.Results;
+
+AssertOpenGL;
+
+stim_vars = result.gen_stim_vars_fn();
 
 isi = result.isi;
 
@@ -95,8 +100,8 @@ end
 % the phases)
 
 %%%
-fprintf(H_Scanbox,'r1')
-fprintf(H_Scanbox,'h');
+% fprintf(H_Scanbox,'r1')
+% fprintf(H_Scanbox,'h');
 
 
 % set up running comp communication
@@ -126,11 +131,14 @@ err = DaqDConfigPort(d,0,0);
 
 result = stim_vars.gen_result_fn(result,conds);
 
+FlushEvents;
+[kinp,tkinp] = GetChar;
 if kinp == 'q'|kinp == 'Q',
 else
     %     outputSingleScan(daq,[0 1 0]);
     % start imaging
     if strcmp(result.modality,'2p')
+        disp('got here')
         fprintf(H_Scanbox,'G'); %go
     end
     pause(3);
@@ -210,14 +218,14 @@ terminate_udp(H_Run)
             DaqDOut(d,0,255);
             DaqDOut(d,0,0);
             disp('stim on')
-            tic
+%             tic
             if ~isnan(thisstim.thisroi)
                 fprintf(H_Scanbox,['p' num2str(uint16(thisstim.thisduration))])
                 fprintf(H_Scanbox,['l' num2str(thisstim.thisamplitude)])
                 fprintf(H_Scanbox,['i' num2str(thisstim.thisroi)])
                 fprintf(H_Scanbox,'s')
             end
-            toc
+%             toc
             
             DaqDOut(d,0,0);
             DaqDOut(d,0,255);
