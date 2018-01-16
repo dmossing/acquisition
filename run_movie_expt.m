@@ -10,6 +10,7 @@ p.addParameter('isi',3);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
 p.addParameter('position',[0,0]);
+p.addParameter('sizes',[]);
 p.addParameter('contrast',1);
 p.addParameter('moviefname','toe_10sec_4x_longer');
 p.parse(varargin{:});
@@ -33,10 +34,11 @@ wininfo = gen_wininfo(result);
 % movieDurationSecs = result.stimduration;
 % movieDurationFrames = round(movieDurationSecs * wininfo.frameRate);
 
-% PatchRadiusPix = ceil(result.sizes.*wininfo.PixperDeg/2); % radius!!
-%
-% x0 = floor(wininfo.xRes/2 + (wininfo.xposStim - result.sizes/2)*wininfo.PixperDeg);
-% y0 = floor(wininfo.yRes/2 + (-wininfo.yposStim - result.sizes/2)*wininfo.PixperDeg);
+if ~isempty(result.sizes)
+    PatchRadiusPix = ceil(result.sizes.*wininfo.PixperDeg/2); % radius!!
+    x0 = floor(wininfo.xRes/2 + (wininfo.xposStim - result.sizes/2)*wininfo.PixperDeg);
+    y0 = floor(wininfo.yRes/2 + (-wininfo.yposStim - result.sizes/2)*wininfo.PixperDeg);
+end
 %
 % if ~isempty(find(x0<1)) | ~isempty(find(y0<1))
 %     disp('too big for the monitor, dude! try other parameters');
@@ -188,13 +190,21 @@ else
     
     thisstim.trnum = 1;
     
+    if isempty(result.sizes) %%% GOTO
+        aperture = [];
+    else
+        [xx,yy] = meshgrid(1:wininfo.xRes,1:wininfo.yRes);
+        aperture = (xx-x0).^2 + (yy-y0).^2 < PatchRadiusPix^2;
+    end
+        
+    
     % set up to show stimuli
     for itrial = 1:result.repetitions,
         
         %             thisstim = getStim(result.gratingInfo,trnum);
         %             thisstim.itrial = itrial;
         trialstart = GetSecs-t0;
-        thisstim.tex = gen_textures(wininfo,frames);
+        thisstim.tex = gen_textures(wininfo,frames,aperture);
         numFrames = numel(thisstim.tex);
         thisstim.movieDurationFrames = numFrames;
         thisstim.movieFrameIndices = mod(0:(thisstim.movieDurationFrames-1), numFrames) + 1;

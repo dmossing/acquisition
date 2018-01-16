@@ -1,9 +1,13 @@
 % function [tex,trigonframe] = gen_gratings(wininfo,gratingInfo,thisstim)
-function thisstim = gen_gratings(wininfo,gratingInfo,thisstim)
+function thisstim = gen_gratings(wininfo,gratingInfo,thisstim,aperture)
+if nargin < 4
+    aperture = [];
+end
 gf = gratingInfo.gf;%.Gaussian width factor 5: reveal all .5 normal fall off
 Bcol = gratingInfo.Bcol; % Background 0 black, 255 white
 method = gratingInfo.method;
 gtype = gratingInfo.gtype;
+circular = gratingInfo.circular;
 % gtype = 'sine';
 
 xRes = wininfo.xRes;
@@ -53,6 +57,10 @@ for i=1:numFrames
         incmax = max(255-Bcol,Bcol);
         G = (floor(thiscontrast*(incmax*G0)+Bcol));
         G = max(G,0);G = min(G,255);
+    end
+    if circular
+        se = strel(thiswidth,0);
+        G(se.Neighborhood) = Bcol;
     end
     
     T = bg;

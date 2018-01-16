@@ -15,6 +15,7 @@ p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',1); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',1);
+p.addParameter('circular',0);
 p.parse(varargin{:});
 
 % choose parameters
@@ -148,6 +149,7 @@ gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
 gratingInfo.Bcol = 128; % Background 0 black, 255 white
 gratingInfo.method = 'symmetric';
 gratingInfo.gtype = 'box';
+gratingInfo.circular = result.circular;
 width  =  PatchRadiusPix;
 gratingInfo.widthLUT = [result.sizes(:) width(:)];
 result.gratingInfo = gratingInfo;
