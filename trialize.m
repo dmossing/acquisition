@@ -1,6 +1,10 @@
 function trialwise = trialize(data,frm,extra_before,extra_after)
 % realign data into rows (or columns for more than one time series) aligned
 % to trial onsets
+% assume data is cell X time
+% trialwise is cell X trial no. X time
+% frm is assumed to contain frame indices for the beginning and end of each stim
+% presentation
 if size(data,1)>1 && size(data,2)>1
     signo = size(data,1);
 else
