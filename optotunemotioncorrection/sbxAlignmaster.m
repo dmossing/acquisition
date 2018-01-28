@@ -5,8 +5,9 @@ function rect = sbxAlignmaster(fname,Depth,rect)
     if ~exist('rect','var') || isempty(rect)
         rect = [];
     end
+    firstframe = sbxreadpacked(fname,1,1);
     if isequal(rect,true)
-        [~, ~, rect] = crop(sbxreadpacked(fname,1,1), rect);
+        [~, ~, rect] = crop(firstframe, rect);
 %         rect = round([rect(3),rect(3)+rect(4),rect(1),rect(1)+rect(2)]);
             rect = [rect(2),rect(2)+rect(4),rect(1),rect(1)+rect(3)];
             rect(1) = max(rect(1),1);
@@ -21,19 +22,6 @@ function rect = sbxAlignmaster(fname,Depth,rect)
             end
     end
 
-%    if info.recordsPerBuffer < info.sz(1)
-%        info.recordsPerBuffer = info.sz(1);
-%    end
-
-    z = sbxreadpacked(fname,0,1);
-
-    fprintf('Starting sbxAlignmaster: %s\n',[fname,'.sbx']);
-
-    %% Edit to load and analyze single depth
-    if ~exist('Depth','var') || isempty(Depth)
-        Depth = 1;
-    end
-    load(fname,'info')
     try
         numDepths = info.otparam(3);
     catch
@@ -44,7 +32,20 @@ function rect = sbxAlignmaster(fname,Depth,rect)
     else
         info.nchan = 1;
     end
-    clear info
+%    if info.recordsPerBuffer < info.sz(1)
+%        info.recordsPerBuffer = info.sz(1);
+%    end
+
+    z = sbxreadpacked(fname,0,1);
+
+    global info
+    
+    fprintf('Starting sbxAlignmaster: %s\n',[fname,'.sbx']);
+
+    %% Edit to load and analyze single depth
+    if ~exist('Depth','var') || isempty(Depth)
+        Depth = 1;
+    end
     %Config = load2PConfig([fname,'.sbx']);
     %numDepths = Config.Depth;
     if numDepths>1

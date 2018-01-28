@@ -70,6 +70,7 @@ function Z = sbxreadpacked(fname,offset,nframes)
         end
         if(info.scanmode==0)
             info.recordsPerBuffer = info.recordsPerBuffer*2;
+            disp('loading bidirectional data')
         end
 
 
