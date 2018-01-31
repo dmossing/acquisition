@@ -180,6 +180,7 @@ else
     
     % set up to show stimuli
     for itrial = 1:result.repetitions,
+        randorder = randperm(allConds);
         for istim = 1:allConds
             %             [kinp,tkinp] = GetChar;
             
@@ -191,7 +192,7 @@ else
             % Information to save in datafile:
 %             thiscondind = allthecondinds(istim,itrial);
 %             thiscond = conds(:,thiscondind);
-            cnum = istim;
+            cnum = randorder(istim);
             Trialnum(trnum) = trnum;
             Condnum(trnum) = cnum;
             Repnum(trnum) = itrial;
