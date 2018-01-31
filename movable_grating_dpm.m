@@ -52,7 +52,7 @@ width = round(sizeGrating/2);
 
 try
     
-    screenNumber = max(Screen('Screens'));
+    screenNumber = 1; %max(Screen('Screens'));
     
     blI = BlackIndex(screenNumber);
     whI = WhiteIndex(screenNumber);
@@ -154,7 +154,4 @@ catch
     
 end
 % dos('C:\Users\Resonant-2\Downloads\nircmd-x64\nircmd.exe setdisplay 1920
-% 1080 32');ssca
-sca
-sca
-sca
+% 1080 32');
