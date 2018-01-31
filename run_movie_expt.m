@@ -12,12 +12,14 @@ p.addParameter('VertScreenSize',27);
 p.addParameter('position',[0,0]);
 p.addParameter('sizes',[]);
 p.addParameter('contrast',1);
-p.addParameter('moviefname','toe_10sec_4x_longer');
+p.addParameter('moviefname','/home/visual-stim/Documents/stims/touch_of_evil/toe_10sec_4x_longer_square');
 p.parse(varargin{:});
 
 % choose parameters
 
 result = p.Results;
+
+load(result.moviefname,'frames')
 
 isi = result.isi;
 % stimduration = result.stimduration;
@@ -36,8 +38,8 @@ wininfo = gen_wininfo(result);
 
 if ~isempty(result.sizes)
     PatchRadiusPix = ceil(result.sizes.*wininfo.PixperDeg/2); % radius!!
-    x0 = floor(wininfo.xRes/2 + (wininfo.xposStim - result.sizes/2)*wininfo.PixperDeg);
-    y0 = floor(wininfo.yRes/2 + (-wininfo.yposStim - result.sizes/2)*wininfo.PixperDeg);
+    x0 = floor(size(frames,2)/2 + wininfo.xposStim*wininfo.PixperDeg);
+    y0 = floor(size(frames,1)/2 - wininfo.yposStim*wininfo.PixperDeg);
 end
 %
 % if ~isempty(find(x0<1)) | ~isempty(find(y0<1))
@@ -185,26 +187,30 @@ else
     
     t0  =  GetSecs;
     trnum = 0;
-    
-    load(result.moviefname,'frames')
-    
+        
     thisstim.trnum = 1;
     
     if isempty(result.sizes) %%% GOTO
         aperture = [];
     else
-        [xx,yy] = meshgrid(1:wininfo.xRes,1:wininfo.yRes);
+        [xx,yy] = meshgrid(1:size(frames,2),1:size(frames,1));
         aperture = (xx-x0).^2 + (yy-y0).^2 < PatchRadiusPix^2;
     end
         
     
     % set up to show stimuli
     for itrial = 1:result.repetitions,
-        
+        if mod(itrial,3) == 0
+            thisaperture = [];
+        elseif mod(itrial,3) == 1
+            thisaperture = ~aperture;
+        elseif mod(itrial,3) == 2
+            thisaperture = aperture;
+        end
         %             thisstim = getStim(result.gratingInfo,trnum);
         %             thisstim.itrial = itrial;
         trialstart = GetSecs-t0;
-        thisstim.tex = gen_textures(wininfo,frames,aperture);
+        thisstim.tex = gen_textures(wininfo,frames,thisaperture);
         numFrames = numel(thisstim.tex);
         thisstim.movieDurationFrames = numFrames;
         thisstim.movieFrameIndices = mod(0:(thisstim.movieDurationFrames-1), numFrames) + 1;

@@ -45,5 +45,7 @@ thisstim.thisfreq = gratingInfo.spFreq(trnum);
 thisstim.thiscontrast = gratingInfo.Contrast(trnum);
 thisstim.thisdeg = gratingInfo.Orientation(trnum);
 thisstim.thisroi = gratingInfo.OptoROI(trnum);
+% thisstim.thisamplitude = gratingInfo.Amplitude(trnum);
+% thisstim.thisduration = gratingInfo.Duration(trnum);
 thisstim.trnum = trnum;
 thisstim.movieDurationFrames = movieDurationFrames;

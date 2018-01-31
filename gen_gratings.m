@@ -59,8 +59,8 @@ for i=1:numFrames
         G = max(G,0);G = min(G,255);
     end
     if circular
-        se = strel(thiswidth,0);
-        G(se.Neighborhood) = Bcol;
+        se = strel('disk',thiswidth,0);
+        G(~se.Neighborhood) = Bcol;
     end
     
     T = bg;

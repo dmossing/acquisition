@@ -1,11 +1,13 @@
 function wininfo = gen_wininfo(result)
-xRes = 1280; 
+% xRes = 1024; 
+% yRes = 768;
+xRes = 1280;
 yRes = 1024;
 Bcol = 128;
 screenNumber = 0;
 
 Screen('Preference', 'VBLTimestampingMode', -1);
-% Screen('Preference','SkipSyncTests', 1); %%% TEMPORARY
+ %Screen('Preference','SkipSyncTests', 1); %%% TEMPORARY
 Screen('Preference','SkipSyncTests', 0);
 [w,~] = Screen('OpenWindow',screenNumber);
 

@@ -10,8 +10,8 @@ p.addParameter('stimduration',1);
 p.addParameter('isi',3);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
-p.addParameter('sizes',25);
-p.addParameter('sFreqs',0.04); % cyc/vis deg
+p.addParameter('sizes',15);
+p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',[1]);
@@ -19,6 +19,7 @@ p.addParameter('gen_stim_vars_fn',@gen_vis_opto_stim_vars);
 p.addParameter('opto_duration',100);
 p.addParameter('opto_amplitude',3.0);
 p.addParameter('opto_targets',[nan 1:3]);
+p.addParameter('circular',0);
 p.parse(varargin{:});
 
 % choose parameters
@@ -157,7 +158,11 @@ err = DaqDConfigPort(d,0,0);
 
 AssertOpenGL;
 
+
 result = stim_vars.gen_result_fn(result,conds);
+
+result.gratingInfo.circular = result.circular;
+
 
 load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
@@ -213,13 +218,12 @@ else
             Repnum(trnum) = itrial;
 %             result = pickNext(result,trnum,thiscond);
             % end save information
-            
-            thisstim = stim_vars.gen_stim_fn(result.gratingInfo,trnum);
+            thisstim.movieDurationFrames = movieDurationFrames;
+            thisstim = stim_vars.gen_stim_fn(result.gratingInfo,trnum,movieDurationFrames);
             thisstim.itrial = itrial;
             
-            thisstim.tex = stim_vars.gen_tex_fn(wininfo,result.gratingInfo,thisstim);
+            thisstim = stim_vars.gen_tex_fn(wininfo,result.gratingInfo,thisstim);
             numFrames = numel(thisstim.tex);
-            thisstim.movieDurationFrames = movieDurationFrames;
             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
             
             result = deliver_stim(result,wininfo,thisstim,d);
@@ -304,6 +308,8 @@ terminate_udp(H_Run)
             disp('stim on')
             tic
             if ~isnan(thisstim.thisroi)
+%                 fprintf(H_Scanbox,['p' num2str(uint16(thisstim.thisduration))])
+%                 fprintf(H_Scanbox,['l' num2str(thisstim.thisamplitude)])
                 fprintf(H_Scanbox,['i' num2str(thisstim.thisroi)])
                 fprintf(H_Scanbox,'s')
             end
