@@ -10,7 +10,7 @@ ch1 = d.addAnalogInputChannel('Dev2','ai1','Voltage');
 dc_offset = 5;
 warmup = 30;
 duration = 10;
-radAmp = 5;
+radAmp = 4;
 radFreq = 1;
 azFreq = 4;
 samplingRate = 1.25e5;
@@ -20,8 +20,10 @@ X = [dc_offset+repmat(x,floor(duration*radFreq),1)];
 Y = [dc_offset+repmat(y,floor(duration*radFreq),1)];
 % X = [linspace(0,dc_offset,samplingRate*warmup)'; dc_offset+repmat(x,floor(duration*radFreq),1)];
 % Y = [linspace(0,dc_offset,samplingRate*warmup)'; dc_offset+repmat(x,floor(duration*radFreq),1)];
-queueOutputData(d,[X Y]);
-data = startForeground(d);
+while(true)
+    queueOutputData(d,[X Y]);
+    data = startForeground(d);
+end
 
 %%
 t = 0:1/samplingRate:(numel(X)-1)/samplingRate;
@@ -46,3 +48,9 @@ subplot(1,2,2)
 plot(t(rg),Y(rg))
 xlabel('t (s)')
 ylabel('Monitor voltage (V)')
+
+%%
+howlong = 5e5;
+ramp = [linspace(10,5,howlong)' linspace(5,5,howlong)'];
+queueOutputData(d,ramp);
+data = startForeground(d);
