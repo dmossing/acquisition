@@ -11,54 +11,62 @@ stopAcquisitionFn = @sb_stop_fn;
 sendTTLFn = @send_ttl_fn;
 setupDaqFn = setup_daq_fn;
 
-    function sb_start_fn()
-        sb_ip = '128.32.173.30'; % SCANBOX ONLY: for UDP
-        sb_port = 7000; % SCANBOX ONLY: for UDP
-        
-        % initialize connection
-        H_Scanbox = udp(sb_ip, 'RemotePort', sb_port); % create udp port handle
-        fopen(H_Scanbox);
-        
-        % clean up udp connection in case of Ctrl-C
-        cleanup_udp_Scanbox = onCleanup(@() terminate_udp(H_Scanbox));
-        
-        % write filename
-        fprintf(H_Scanbox,sprintf('A%s',base));
-        fprintf(H_Scanbox,sprintf('U%s',depth));
-        fprintf(H_Scanbox,sprintf('E%s',fileindex));
-        
-        % set up running comp communication
-        
-        run_ip = '128.32.19.202'; % for UDP
-        run_port = 25000; % for UDP
-        
-        thisRunFolder = [runFolder dstr '/' base];
-        if ~exist(thisRunFolder,'dir')
-            mkdir(thisRunFolder)
-        end
-        
-        % initialize connection
-        H_Run = udp(run_ip, 'RemotePort', run_port, 'LocalPort', run_port); % create udp port handle
-        fopen(H_Run);
-        
-        % clean up udp connection in case of Ctrl-C
-        cleanup_udp_Run = onCleanup(@() terminate_udp(H_Run));
-        
-        fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
-        
+%     function sb_start_fn()
+%         sb_ip = '128.32.173.30'; % SCANBOX ONLY: for UDP
+%         sb_port = 7000; % SCANBOX ONLY: for UDP
+%         
+%         % initialize connection
+%         H_Scanbox = udp(sb_ip, 'RemotePort', sb_port); % create udp port handle
+%         fopen(H_Scanbox);
+%         
+%         % clean up udp connection in case of Ctrl-C
+%         cleanup_udp_Scanbox = onCleanup(@() terminate_udp(H_Scanbox));
+%         
+%         % write filename
+%         fprintf(H_Scanbox,sprintf('A%s',base));
+%         fprintf(H_Scanbox,sprintf('U%s',depth));
+%         fprintf(H_Scanbox,sprintf('E%s',fileindex));
+%         
+%         % set up running comp communication
+%         
+%         run_ip = '128.32.19.202'; % for UDP
+%         run_port = 25000; % for UDP
+%         
+%         thisRunFolder = [runFolder dstr '/' base];
+%         if ~exist(thisRunFolder,'dir')
+%             mkdir(thisRunFolder)
+%         end
+%         
+%         % initialize connection
+%         H_Run = udp(run_ip, 'RemotePort', run_port, 'LocalPort', run_port); % create udp port handle
+%         fopen(H_Run);
+%         
+%         % clean up udp connection in case of Ctrl-C
+%         cleanup_udp_Run = onCleanup(@() terminate_udp(H_Run));
+%         
+%         fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
+%         
+%     end
+% 
+%     function sb_stop_fn()
+%         terminate_udp(H_Scanbox)
+%     end
+
+    function scanimage_start_fn()
+        sendTTLFn();
     end
 
-    function sb_stop_fn()
-        terminate_udp(H_Scanbox)
+    function scanimage_stop_fn()
+        sendTTLFn();
     end
 
-    function d = setup_daq_fn()
+    function setup_daq_fn()
         % set up DAQ
         d = DaqFind;
         err = DaqDConfigPort(d,0,0);
     end
 
-    function send_ttl_fn(d)
+    function send_ttl_fn()
         DaqDOut(d,0,0);
         DaqDOut(d,0,255);
         DaqDOut(d,0,0);
@@ -72,7 +80,6 @@ p.addParameter('depth','000');
 p.addParameter('orientations',0:45:315);
 p.addParameter('repetitions',10);
 p.addParameter('stimduration',1);
-p.addParameter('isi',3);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
 p.addParameter('sizes',25);
@@ -81,11 +88,18 @@ p.addParameter('tFreqs',1); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',1);
 p.addParameter('circular',0);
+p.addParameter('isi',3);
+p.addParameter('image_before',1);
+p.addParameter('image_after',1);
 p.parse(varargin{:});
 
 % choose parameters
 
 result = p.Results;
+
+if result.isi<result.image_before+result.image_after
+    result.isi = result.image_before+result.image_after;
+end
 
 setupAcquisitionFn();
 d = setupDaqFn();
@@ -131,8 +145,6 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-
-startAcquisitionFn()
 
 % % write filename
 
@@ -183,6 +195,7 @@ else
     t0  =  GetSecs;
     trnum = 0;
     stimParams = [];
+        
     % set up to show stimuli
     for itrial = 1:result.repetitions,
         theseinds = randperm(result.allConds);
@@ -195,7 +208,7 @@ else
             
             trnum = trnum+1;
             trialstart = GetSecs-t0;
-            
+                        
             % Information to save in datafile:
             thiscond = theseconds(istim);
             result = pickNext(result,trnum,thiscond);
@@ -207,7 +220,16 @@ else
             thisstim.movieDurationFrames = movieDurationFrames;
             thisstim = gen_gratings(wininfo,result.gratingInfo,thisstim);
             
+%             startAcquisitionFn()
+            
             result = deliver_stim(result,wininfo,thisstim,d);
+            
+            trialend = GetSecs-t0;
+            
+%             WaitSecs(max(0, result.stimduration + result.image_before ...
+%                 + result.image_after - ((GetSecs-t0)-trialstart)));
+            
+%             stopAcquisitionFn;
             
             [keyIsDown, secs, keyCode] = KbCheck;
             if keyIsDown & KbName(keyCode) == 'p'
@@ -238,8 +260,8 @@ else
 end
 
 % % stop imaging
-stopAcquisitionFn()
-terminate_udp(H_Run)
+% stopAcquisitionFn()
+% terminate_udp(H_Run)
 
 %% that running computer should stop monitoring
 
@@ -266,11 +288,13 @@ terminate_udp(H_Run)
             int2str(result.repetitions)], 0, 0, [255,0,0]);
         Screen('Flip', w);
         
-        WaitSecs(max(0, result.isi-((GetSecs-t0)-trialstart)));
+        WaitSecs(max(0, result.isi - result.image_before - result.image_after - ((GetSecs-t0)-trialstart)));
+        
+        startAcquisitionFn();
         
         Screen('DrawTexture',w,BG);
         fliptime  =  Screen('Flip', w);
-        WaitSecs(max(0,prestimtimems/1000));
+        WaitSecs(result.image_before);
         
         % last flip before movie starts
         Screen('DrawTexture',w,BG);
@@ -281,7 +305,7 @@ terminate_udp(H_Run)
         
         % send stim on trigger
         
-        sendTTLfn(d)
+%         sendTTLfn(d)
         
         disp('stim on')
         tic
@@ -289,9 +313,13 @@ terminate_udp(H_Run)
         show_tex(wininfo,thisstim)
         toc
         
-        sendTTLfn(d)
+%         sendTTLfn(d)
         
         disp('stim off')
+        
+        WaitSecs(result.image_after)
+        
+        stopAcquisitionFn();
         
         stimt = GetSecs-t0-stimstart;
         Screen('DrawTexture',w,BG);

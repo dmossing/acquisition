@@ -25,6 +25,87 @@ end
 
 % set up DAQ
 
+% do stimulus data file management
+% stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
+stimFolderRemote = '/home/mossing/excitation/mossing/visual_stim/';
+stimFolderLocal = '/home/visual-stim/Documents/StimData/';
+dstr = yymmdd(date);
+resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
+if ~exist(resDirRemote,'dir')
+    mkdir(resDirRemote)
+end
+resDirLocal = [stimFolderLocal dstr '/' result.animalid '/'];
+if ~exist(resDirLocal,'dir')
+    mkdir(resDirLocal)
+end
+
+nexp  =  ddigit(length(dir(fullfile(resDirLocal,'*.mat'))),3);
+fnameLocal  =  strcat(resDirLocal,result.animalid,'_',result.depth,'_',nexp,'.mat');
+fnameRemote  =  strcat(resDirRemote,result.animalid,'_',result.depth,'_',nexp,'.mat');
+result.nexp = nexp;
+
+base = result.animalid;
+depth = result.depth;
+fileindex = result.nexp;
+runpath = '//adesnik2.ist.berkeley.edu/excitation/mossing/LF2P/running/';
+runfolder = [runpath dstr '/' base];
+if ~exist(runfolder,'dir')
+    mkdir(runfolder)
+end
+% if strcmp(result.modality,'2p')
+
+set up scanbox communication
+
+sb_ip = '128.32.173.30'; % SCANBOX ONLY: for UDP
+sb_port = 7000; % SCANBOX ONLY: for UDP
+
+initialize connection
+H_Scanbox = udp(sb_ip, 'RemotePort', sb_port); % create udp port handle
+fopen(H_Scanbox);
+
+clean up udp connection in case of Ctrl-C
+cleanup_udp_Scanbox = onCleanup(@() terminate_udp(H_Scanbox));
+
+% write filename
+fprintf(H_Scanbox,sprintf('A%s',base));
+fprintf(H_Scanbox,sprintf('U%s',depth));
+fprintf(H_Scanbox,sprintf('E%s',fileindex));
+
+% else
+%
+%     lf_ip = '128.32.19.203';
+%     lf_port = 29000;
+%
+%     % initialize connection
+%     H_lf = udp(lf_ip, 'RemotePort', lf_port);
+%     fopen(H_lf);
+%
+%     cleanup_udp_lf = onCleanup(@() terminate_udp(H_lf));
+%     runpath = '//E:LF2P/ ... NEED TO FILL IN';
+%     fprintf(H_lf,sprintf('G%s/%s_%s_%s.dat', runfolder, base, depth, fileindex));
+% end
+
+% set up running comp communication
+
+run_ip = '128.32.19.202'; % for UDP
+run_port = 25000; % for UDP
+
+% initialize connection
+H_Run = udp(run_ip, 'RemotePort', run_port, 'LocalPort', run_port); % create udp port handle
+fopen(H_Run);
+
+% clean up udp connection in case of Ctrl-C
+cleanup_udp_Run = onCleanup(@() terminate_udp(H_Run));
+
+base = result.animalid;
+depth = result.depth;
+fileindex = result.nexp;
+
+% % write filename
+
+fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
+fprintf(H_Scanbox,'G'); %go
+
 % daq=daq.createSession('ni');
 % addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
 % addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
@@ -42,7 +123,7 @@ srvsock = mslisten(3000);
 DaqDOut(d,0,0);
 DaqDOut(d,0,255);
 
-pause(3)
+pause(1)
 % % assume the other PC has responded by requesting a connection by this
 % % point
 sock = msaccept(srvsock);
@@ -52,15 +133,15 @@ DaqDOut(d,0,255);
 DaqDOut(d,0,0);
 
 frameRate = 60;     % Hz
-assert(strcmp(ScreenType,'projector') || strcmp(ScreenType,'monitor'));
-if strcmp(ScreenType,'projector')
-    xRes = 1024; yRes = 768;
-    VertCRTSize = 13;
-else
+% assert(strcmp(ScreenType,'projector') || strcmp(ScreenType,'monitor'));
+% if strcmp(ScreenType,'projector')
 %     xRes = 1024; yRes = 768;
-    xRes = 1280; yRes = 1024;
-    VertCRTSize = 27;
-end
+%     VertCRTSize = 13;
+% else
+% %     xRes = 1024; yRes = 768;
+xRes = 1280; yRes = 1024;
+VertCRTSize = 27;
+% end
 
 Bcol = 128;
 screenInfo = genscreenInfo(xRes,yRes,VertCRTSize,DScreen,frameRate,Bcol);
@@ -188,6 +269,8 @@ try
         DaqDOut(d,0,0);
     end
     msclose(sock);
+    terminate_udp(H_Scanbox)
+    terminate_udp(H_Run)
     
     % Revive the mouse cursor.
     ShowCursor;
@@ -222,3 +305,9 @@ catch
     end
     msclose(sock);
 end
+
+    function terminate_udp(handle)
+        fprintf(handle,'S');
+        fclose(handle);
+        delete(handle);
+    end

@@ -210,39 +210,6 @@ else
     conds(:,sum(~isnan(conds))==0) = [];
     allConds = size(conds,2);
     stimParams = [];
-%     for i=1:allConds
-%         thisaperture = aperture;
-%         theseconds = conds;
-%         if isnan(theseconds(1,i))
-%             %                 thisaperture(aperture) = false;
-%             show_center = false;
-%             rotate_center = false;
-%         elseif theseconds(1,i)
-%             show_center = true;
-%             rotate_center = true;
-%         else
-%             show_center = true;
-%             rotate_center = false;
-%         end
-%         if isnan(theseconds(2,i))
-%             %                 thisaperture(~aperture) = false;
-%             show_surround = false;
-%             rotate_surround = false;
-%         elseif theseconds(2,i)
-%             show_surround = true;
-%             rotate_surround = true;
-%         else
-%             show_surround = true;
-%             rotate_surround = false;
-%         end
-%         thistex = gen_textures(wininfo,frames,thisaperture,show_center,...
-%             show_surround,rotate_center,rotate_surround);
-%         pretex(i).tex = thistex;
-%     end
-    % set up to show stimuli
-%     lut = {'surround', 'rot. surround', 'center', 'center + surround',...
-%         'center + rot. surround', 'rot. center','rot. center + surround',
-%         'rot. center + rot. surround',};
     lut = 'NaN = no contrast, 0 = not rotated, 90 = rotated 90 deg. First number, center; second number, surround';
     for istim = 1:result.repetitions,
         theseinds = randperm(allConds);
