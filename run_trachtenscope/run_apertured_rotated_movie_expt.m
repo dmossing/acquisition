@@ -12,7 +12,7 @@ p.addParameter('VertScreenSize',27);
 p.addParameter('position',[0,0]);
 p.addParameter('sizes',[]);
 p.addParameter('contrast',1);
-p.addParameter('moviefname','/home/visual-stim/Documents/stims/touch_of_evil/toe_10sec_4x_longer_square_1024');
+p.addParameter('moviefname','/home/visual-stim/Documents/stims/touch_of_evil/toe_10sec_4x_longer_square_512');
 p.parse(varargin{:});
 
 % choose parameters
@@ -20,6 +20,10 @@ p.parse(varargin{:});
 result = p.Results;
 
 load(result.moviefname,'frames')
+% rotated_frames = frames;
+% for i=1:size(frames,3)
+%     rotated_frames(:,:,i) = rot90(frames(:,:,i));
+% end
 
 isi = result.isi;
 % stimduration = result.stimduration;
@@ -156,16 +160,20 @@ result.gratingInfo = gratingInfo;
 load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
+% PsychImaging('PrepareConfiguration');
+% 
+% PsychImaging('AddTask', 'General', 'UsePanelFitter', [wininfo.xRes,wininfo.yRes], 'Aspect');
+
 Screen('DrawTexture',wininfo.w, wininfo.BG);
 Screen('TextFont',wininfo.w, 'Courier New');
-Screen('TextSize',wininfo.w, 14);
+Screen('TextSize',wininfo.w, 7);
 Screen('TextStyle', wininfo.w, 1+2);
 % Screen('DrawText', wininfo.w, strcat(num2str(allConds),' Conditions__',...
 %     num2str(result.repetitions),' Repeats__',...
 %     num2str(allConds*result.repetitions*(isi+stimduration)/60),...
 %     ' min estimated Duration.'), 60, 50, [255 128 0]);
 Screen('DrawText', wininfo.w, strcat('Filename:',fnameLocal,...
-    '    Hit any key to continue / q to abort.'), 60, 70, [255 128 0]);
+    '    Hit any key to continue / q to abort.'), 30, 35, [255 128 0]);
 Screen('Flip',wininfo.w);
 
 FlushEvents;
@@ -182,6 +190,7 @@ else
     pause(1);
     
     Screen('DrawTexture',wininfo.w, wininfo.BG);
+%     PsychImaging('AddTask', 'General', 'UsePanelFitter', [wininfo.xRes,wininfo.yRes], 'Aspect');
     Screen('Flip', wininfo.w);
     result.starttime  =  datestr(now);
     
@@ -197,33 +206,93 @@ else
         aperture = (xx-x0).^2 + (yy-y0).^2 < PatchRadiusPix^2;
     end
     
-    conds = [];
+    conds = makeAllCombos([NaN 0 90],[NaN 0 90]);
+    conds(:,sum(~isnan(conds))==0) = [];
+    allConds = size(conds,2);
+    stimParams = [];
+%     for i=1:allConds
+%         thisaperture = aperture;
+%         theseconds = conds;
+%         if isnan(theseconds(1,i))
+%             %                 thisaperture(aperture) = false;
+%             show_center = false;
+%             rotate_center = false;
+%         elseif theseconds(1,i)
+%             show_center = true;
+%             rotate_center = true;
+%         else
+%             show_center = true;
+%             rotate_center = false;
+%         end
+%         if isnan(theseconds(2,i))
+%             %                 thisaperture(~aperture) = false;
+%             show_surround = false;
+%             rotate_surround = false;
+%         elseif theseconds(2,i)
+%             show_surround = true;
+%             rotate_surround = true;
+%         else
+%             show_surround = true;
+%             rotate_surround = false;
+%         end
+%         thistex = gen_textures(wininfo,frames,thisaperture,show_center,...
+%             show_surround,rotate_center,rotate_surround);
+%         pretex(i).tex = thistex;
+%     end
     % set up to show stimuli
-    lut = {'center + surround','center','surround','center + rotated surround'};
+%     lut = {'surround', 'rot. surround', 'center', 'center + surround',...
+%         'center + rot. surround', 'rot. center','rot. center + surround',
+%         'rot. center + rot. surround',};
+    lut = 'NaN = no contrast, 0 = not rotated, 90 = rotated 90 deg. First number, center; second number, surround';
     for istim = 1:result.repetitions,
-        theseconds = randperm(4);
-        conds = [conds theseconds(:)'];
-        for itrial=1:4
+        theseinds = randperm(allConds);
+        theseconds = conds(:,theseinds);
+        stimParams = [stimParams theseconds];
+        for itrial=1:allConds
+            thisaperture = aperture;
+            if isnan(theseconds(1,itrial))
+%                 thisaperture(aperture) = false;
+                show_center = false;
+                rotate_center = false;
+            elseif theseconds(1,itrial)
+                show_center = true;
+                rotate_center = true;
+            else
+                show_center = true;
+                rotate_center = false;
+            end
+            if isnan(theseconds(2,itrial))
+%                 thisaperture(~aperture) = false;
+                show_surround = false;
+                rotate_surround = false;
+            elseif theseconds(2,itrial)
+                show_surround = true;
+                rotate_surround = true;
+            else
+                show_surround = true;
+                rotate_surround = false;
+            end
+                
             %         thisaperture = aperture;
             %         rotate_surround = false;
-            if theseconds(itrial)==1
-                thisaperture = [];
-                rotate_surround = false;
-            elseif theseconds(itrial)==2
-                thisaperture = aperture;
-                rotate_surround = false;
-            elseif theseconds(itrial)==3
-                thisaperture = ~aperture;
-                rotate_surround = false;
-            elseif theseconds(itrial)==4
-                thisaperture = aperture;
-                rotate_surround = true;
-            end
+%             if theseconds(itrial)==1
+%                 thisaperture = ~aperture;
+%                 rotate_surround = false;
+%             elseif theseconds(itrial)==2
+%                 thisaperture = ~aperture;
+%                 rotate_surround = true;
+%             elseif theseconds(itrial)==3
+%                 thisaperture = ~aperture;
+%                 rotate_surround = false;
+%             elseif theseconds(itrial)==4
+%                 thisaperture = aperture;
+%                 rotate_surround = true;
+%             end
             
             %             thisstim = getStim(result.gratingInfo,trnum);
             %             thisstim.itrial = itrial;
             trialstart = GetSecs-t0;
-            thisstim.tex = gen_textures(wininfo,frames,thisaperture,rotate_surround);
+            thisstim.tex = gen_textures(wininfo,frames,thisaperture,show_center,show_surround,rotate_center,rotate_surround); %  pretex(theseinds(itrial)).tex; %
             numFrames = numel(thisstim.tex);
             thisstim.movieDurationFrames = numFrames;
             thisstim.movieFrameIndices = mod(0:(thisstim.movieDurationFrames-1), numFrames) + 1;
@@ -239,7 +308,7 @@ else
     end
 end
 
-result.stimParams = conds;%(:,Condnum);
+result.stimParams = stimParams;%(:,Condnum);
 result.stimLUT = lut;
 result.dispInfo.xRes  =  wininfo.xRes;
 result.dispInfo.yRes  =  wininfo.yRes;
@@ -285,6 +354,7 @@ terminate_udp(H_Run)
         Priority(priorityLevel);
         
         %--
+%         PsychImaging('AddTask', 'General', 'UsePanelFitter', [wininfo.xRes,wininfo.yRes], 'Aspect');
         Screen('DrawTexture',w,BG);
         % Screen('DrawText', w, ['trial ' int2str(thisstim.trnum) '/' ...
         %     int2str(allConds) 'repetition ' int2str(thisstim.itrial) '/'...
@@ -292,7 +362,6 @@ terminate_udp(H_Run)
         Screen('Flip', w);
         
         WaitSecs(max(0, result.isi-((GetSecs-t0)-trialstart)));
-        
         Screen('DrawTexture',w,BG);
         fliptime  =  Screen('Flip', w);
         WaitSecs(max(0,prestimtimems/1000));

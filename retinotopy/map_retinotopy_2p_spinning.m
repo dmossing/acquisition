@@ -57,8 +57,8 @@ if strcmp(ScreenType,'projector')
     xRes = 1024; yRes = 768;
     VertCRTSize = 13;
 else
-    xRes = 1024; yRes = 768;
-%     xRes = 1280; yRes = 1024;
+%     xRes = 1024; yRes = 768;
+    xRes = 1280; yRes = 1024;
     VertCRTSize = 27;
 end
 

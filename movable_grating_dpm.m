@@ -52,7 +52,7 @@ width = round(sizeGrating/2);
 
 try
     
-    screenNumber = 1; %max(Screen('Screens'));
+    screenNumber = max(Screen('Screens'));
     
     blI = BlackIndex(screenNumber);
     whI = WhiteIndex(screenNumber);
