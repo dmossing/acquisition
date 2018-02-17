@@ -7,12 +7,12 @@ p.addParameter('depth','000');
 p.addParameter('orientations',0:45:315);
 p.addParameter('repetitions',10);
 p.addParameter('stimduration',1);
-p.addParameter('isi',3);
+p.addParameter('isi',1);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
-p.addParameter('sizes',25);
-p.addParameter('sFreqs',0.04); % cyc/vis deg
-p.addParameter('tFreqs',2); % cyc/sec
+p.addParameter('sizes',20);
+p.addParameter('sFreqs',0.08); % cyc/vis deg
+p.addParameter('tFreqs',1); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',[0 1]);
 p.addParameter('groundContrast',[0 1]);
