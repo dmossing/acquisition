@@ -1,28 +1,22 @@
-function [xpos,ypos] = map_retinotopy_2p_spinning(ratio,orientations,DScreen,...
-    ScreenType,gratingSize,spFreq,tFreq,nreps)
+function [xpos,ypos] = map_retinotopy_2p_spinning(varargin) %(ratio,orientations,DScreen,...
+%     ScreenType,gratingSize,spFreq,tFreq,nreps)
 
-if nargin<2 || isempty(orientations)
-    orientations = 0:45:315;
-end
-if nargin<3 || isempty(DScreen)
-    DScreen = 15;
-end
-if nargin<4 || isempty(ScreenType)
-    ScreenType = 'monitor';
-end
-if nargin<5 || isempty(gratingSize)
-    gratingSize = 10;
-end
-if nargin<6 || isempty(spFreq)
-    spFreq = 0.08;
-end
-if nargin<7 || isempty(tFreq)
-    tFreq = 2;
-end
-if nargin<8 || isempty(nreps)
-    nreps = 1;
-end
+p = inputParser;
+p.addParameter('animalid','Mfake');
+p.addParameter('depth','000');
+p.addParameter('repetitions',3);
+p.addParameter('ratio',1);
+p.addParameter('DScreen',15);
+p.addParameter('VertScreenSize',27);
+p.addParameter('sizes',10);
+p.addParameter('grid',1)
+p.addParameter('contrast',1);
+p.addParameter('orientations',0:45:315);
+p.addParameter('spFreq',0.08); % cyc/vis deg
+p.addParameter('tFreq',2); % cyc/sec
+p.parse(varargin{:});
 
+result = p.Results;
 % set up DAQ
 
 % do stimulus data file management
@@ -52,18 +46,19 @@ runfolder = [runpath dstr '/' base];
 if ~exist(runfolder,'dir')
     mkdir(runfolder)
 end
+
 % if strcmp(result.modality,'2p')
 
-set up scanbox communication
+%set up scanbox communication
 
 sb_ip = '128.32.173.30'; % SCANBOX ONLY: for UDP
 sb_port = 7000; % SCANBOX ONLY: for UDP
 
-initialize connection
+% initialize connection
 H_Scanbox = udp(sb_ip, 'RemotePort', sb_port); % create udp port handle
 fopen(H_Scanbox);
 
-clean up udp connection in case of Ctrl-C
+% clean up udp connection in case of Ctrl-C
 cleanup_udp_Scanbox = onCleanup(@() terminate_udp(H_Scanbox));
 
 % write filename
@@ -101,17 +96,20 @@ base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
 
+d = DaqFind;
+err = DaqDConfigPort(d,0,0);
+
 % % write filename
 
 fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
 fprintf(H_Scanbox,'G'); %go
 
+pause(5)
+
 % daq=daq.createSession('ni');
 % addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
 % addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
 % addDigitalChannel(daq,'Dev3','port0/line2','OutputOnly'); % complete stim protocol, move in z
-d = DaqFind;
-err = DaqDConfigPort(d,0,0);
 
 % set up msocket
 
@@ -123,7 +121,7 @@ srvsock = mslisten(3000);
 DaqDOut(d,0,0);
 DaqDOut(d,0,255);
 
-pause(1)
+pause(3)
 % % assume the other PC has responded by requesting a connection by this
 % % point
 sock = msaccept(srvsock);
@@ -133,28 +131,34 @@ DaqDOut(d,0,255);
 DaqDOut(d,0,0);
 
 frameRate = 60;     % Hz
+
+wininfo = gen_wininfo(result);
+
 % assert(strcmp(ScreenType,'projector') || strcmp(ScreenType,'monitor'));
 % if strcmp(ScreenType,'projector')
 %     xRes = 1024; yRes = 768;
 %     VertCRTSize = 13;
 % else
 % %     xRes = 1024; yRes = 768;
-xRes = 1280; yRes = 1024;
-VertCRTSize = 27;
+% xRes = 1280; yRes = 1024;
+% VertCRTSize = 27;
 % end
 
-Bcol = 128;
-screenInfo = genscreenInfo(xRes,yRes,VertCRTSize,DScreen,frameRate,Bcol);
-window = screenInfo.window;
+Bcol = wininfo.Bcol;
+% screenInfo = genscreenInfo(wininfo.xRes,wininfo.yRes,result.VertScreenSize,result.DScreen,wininfo.frameRate,wininfo.Bcol);
+window = wininfo.w; % screenInfo.window;
 try
-    
-    locs = tileScreen(gratingSize,screenInfo);
+    Screen('DrawTexture',wininfo.w, wininfo.BG);
+    Screen('Flip', wininfo.w);
+    locs = tileScreen(result.sizes,wininfo,result.grid); %screenInfo);
     [ny,nx,~] = size(locs);
-    nori = numel(orientations);
+    nori = numel(result.orientations);
     [indy,indx] = meshgrid(1:ny,1:nx);
     order = randperm(ny*nx);
     locinds = [indy(order); indx(order)]';
-    locinds = repmat(locinds,nreps,1);
+    locinds = repmat(locinds,result.repetitions,1);
+    result.locs = locs;
+    result.locinds = locinds;
     
     % % % SEND THIS (locinds) TO OTHER PC VIA MSOCKET
     %     pause(1)
@@ -163,26 +167,26 @@ try
     mssend(sock,locinds)
     
     nCycles = 0.5;
-    numEach = ceil(nCycles*frameRate/tFreq);
+    numEach = ceil(nCycles*frameRate/result.tFreq);
     numFrames = nori*numEach;
-    sizeGrating = ceil(gratingSize*screenInfo.PixperDeg);
+    sizeGrating = ceil(result.sizes*wininfo.PixperDeg);
     for j = 1:nori
         start = (j-1)*numEach;
-        gratingInfo = gengratingInfo(gratingSize,spFreq,tFreq,orientations(j));
+        gratingInfo = gengratingInfo(result.sizes,result.spFreq,result.tFreq,result.orientations(j));
         for i = 1:numEach
-            gratingFrame(start+i) = gengratingFrame(i,gratingInfo,screenInfo);
+            gratingFrame(start+i) = gengratingFrame(i,gratingInfo,wininfo);
         end
     end
-    for k = 1:ratio*numFrames
-        gratingFrame(numFrames+k) = gensolidFrame(screenInfo,sizeGrating);
+    for k = 1:result.ratio*numFrames
+        gratingFrame(numFrames+k) = gensolidFrame(wininfo,sizeGrating);
     end
     % generate gray frames for baseline acquisition
     for j = 1:nori
         for i = 1:numFrames
-            blankFrame(i) = gensolidFrame(screenInfo);
+            blankFrame(i) = gensolidFrame(wininfo);
         end
-        for k = 1:ratio*numFrames
-            blankFrame(numFrames+k) = gensolidFrame(screenInfo);
+        for k = 1:result.ratio*numFrames
+            blankFrame(numFrames+k) = gensolidFrame(wininfo);
         end
     end
     
@@ -205,7 +209,7 @@ try
         Screen('Flip', window);
         
         blankFrameIndex = blankFrameIndex + 1;
-        if blankFrameIndex > (ratio+1)*numFrames
+        if blankFrameIndex > (result.ratio+1)*numFrames
             blankFrameIndex = 1;
             oriIndex = oriIndex + 1;
         end
@@ -220,7 +224,7 @@ try
     %     numlocs = 5;
     
     % Exit the demo as soon as the user presses a mouse button.
-    for repindex=1:nreps
+    for repindex=1:result.repetitions
         for i=1:numel(order)
             % ------ Bookkeeping Variables ------
             gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
@@ -228,14 +232,16 @@ try
             %         oriIndex = indo(order(i));
             % We need to redraw the text or else it will disappear after a
             % subsequent call to Screen('Flip').
-            Screen('DrawText', window, 'Click to exit', 0, 0, screenInfo.blI);
+            Screen('DrawTexture',wininfo.w, wininfo.BG);
+            Screen('Flip', wininfo.w);
+            Screen('DrawText', window, 'Click to exit', 0, 0, wininfo.blI);
             mY = locs(indy(order(i)),indx(order(i)),1);
             mX = locs(indy(order(i)),indx(order(i)),2);
             % Draw the sprite at the new location.
             DaqDOut(d,0,0);
             DaqDOut(d,0,255);
             DaqDOut(d,0,127);
-            while gratingFrameIndex < (ratio)*numFrames
+            while gratingFrameIndex < (result.ratio)*numFrames
                 Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
                 % Call Screen('Flip') to update the screen.  Note that calling
                 % 'Flip' after we have both erased and redrawn the sprite prevents
@@ -246,7 +252,7 @@ try
             DaqDOut(d,0,127);
             DaqDOut(d,0,255);
             DaqDOut(d,0,0);
-            while gratingFrameIndex < (ratio+1)*numFrames
+            while gratingFrameIndex < (result.ratio+1)*numFrames
                 Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
                 % Call Screen('Flip') to update the screen.  Note that calling
                 % 'Flip' after we have both erased and redrawn the sprite prevents
@@ -274,16 +280,18 @@ try
     
     % Revive the mouse cursor.
     ShowCursor;
-    PixperDeg = screenInfo.PixperDeg;
-    xpos = round((locs(:,:,2)-xRes/2)/PixperDeg)
-    ypos = round((yRes/2-locs(:,:,1))/PixperDeg)
+    PixperDeg = wininfo.PixperDeg;
+    xpos = round((locs(:,:,2)-wininfo.xRes/2)/wininfo.PixperDeg)
+    ypos = round((wininfo.yRes/2-locs(:,:,1))/wininfo.PixperDeg)
     
     % Close screen
     Screen('CloseAll');
+    save(fnameLocal, 'result');
+    save(fnameRemote, 'result');
     
     % Restore preferences
-    Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
-    Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
+%     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
+%     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
     
 catch
     disp('error')
@@ -291,8 +299,8 @@ catch
     % return the user to the familiar MATLAB prompt.
     ShowCursor;
     Screen('CloseAll');
-    Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
-    Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
+%     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
+%     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
     psychrethrow(psychlasterror);
     
     for i=1:10
@@ -304,10 +312,13 @@ catch
         DaqDOut(d,0,0);
     end
     msclose(sock);
+    terminate_udp(H_Scanbox)
+    terminate_udp(H_Run)
+    save(fnameLocal, 'result');
+    save(fnameRemote, 'result');
 end
 
-    function terminate_udp(handle)
-        fprintf(handle,'S');
-        fclose(handle);
-        delete(handle);
-    end
+function terminate_udp(handle)
+fprintf(handle,'S');
+fclose(handle);
+delete(handle);

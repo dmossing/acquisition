@@ -190,7 +190,6 @@ else
     pause(1);
     
     Screen('DrawTexture',wininfo.w, wininfo.BG);
-%     PsychImaging('AddTask', 'General', 'UsePanelFitter', [wininfo.xRes,wininfo.yRes], 'Aspect');
     Screen('Flip', wininfo.w);
     result.starttime  =  datestr(now);
     
