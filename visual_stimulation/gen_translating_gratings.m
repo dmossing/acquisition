@@ -1,5 +1,5 @@
 % function [tex,trigonframe] = gen_gratings(wininfo,gratingInfo,thisstim)
-function thisstim = gen_translating_gratings(wininfo,gratingInfo,thisstim,aperture)
+function thisstim = gen_translating_gratings(wininfo,gratingInfo,thisstim,aperture,contextwidth)
 if nargin < 4
     aperture = [];
 end
@@ -21,6 +21,7 @@ bg = Bcol*ones(yRes,xRes);
 
 thisdeg = thisstim.thisdeg;
 thiswidth = thisstim.thiswidth;
+thiscontextwidth = PixperDeg*contextwidth;
 thissize = thisstim.thissize;
 thiscontrast = thisstim.thiscontrast;
 thisfreq = thisstim.thisfreq;
@@ -33,7 +34,7 @@ x0 = floor(xRes/2 + xposStim*PixperDeg - thissize.*PixperDeg/2);
 y0 = floor(yRes/2 - yposStim*PixperDeg - thissize.*PixperDeg/2);
 
 [x,y] = meshgrid([-thiswidth:thiswidth],[-thiswidth:thiswidth]);
-numFrames = ceil(frameRate/thisspeed);
+numFrames = ceil(frameRate/gratingInfo.stimduration);
 %     tic
 clear T G;
 phase = 0; %(i/numFrames)*2*pi;
@@ -63,8 +64,13 @@ if circular
 end
 for i=1:numFrames
     T = bg;
+    thisy0 = y0 + (i/numFrames-1/2)*thiscontextwidth*sin(angle);
+    thisx0 = x0 + (i/numFrames-1/2)*thiscontextwidth*cos(angle);
     if ~isnan(thisdeg) % kludge to allow for nan orientation to mean gray screen!
-        T(y0:y0+size(G,2)-1,x0:x0+size(G,2)-1) = G;
+        T(thisy0:thisy0+size(G,2)-1,thisx0:thisx0+size(G,2)-1) = G;
+    end
+    if ~isempty(aperture)
+        T(~aperture) = Bcol;
     end
     %     toc
     %     tic

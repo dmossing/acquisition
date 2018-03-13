@@ -14,8 +14,12 @@ p.addParameter('sizes',25);
 p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',1); % cyc/sec
 p.addParameter('position',[0,0]);
-p.addParameter('contrast',1);
+% p.addParameter('contrast',1);
 p.addParameter('circular',0);
+p.addParameter('figure_contrast',[0 1]);
+p.addParameter('ground_contrast',[0 1]);
+p.addParameter('figure_size',20);
+p.addParameter('ground_size',60);
 p.parse(varargin{:});
 
 % choose parameters
@@ -26,11 +30,17 @@ isi = result.isi;
 stimduration = result.stimduration;
 
 % create all stimulus conditions from the single parameter vectors
-nConds  =  [length(result.orientations) length(result.sizes) length(result.tFreqs) length(result.sFreqs) length(result.contrast)];
+nConds  =  [length(result.orientations) length(result.sizes) length(result.tFreqs) length(result.sFreqs) length(result.figure_contrast) length(result.ground_contrast)];
 allConds  =  prod(nConds);
 % result.allConds = allConds;
 % repPerCond  =  allConds./nConds;
-conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast);
+conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.figure_contrast,result.ground_contrast);
+
+[xx,yy] = meshgrid(-wininfo.xRes/2+1:wininfo.xRes/2,-wininfo.yRes/2+1:wininfo.yRes/2);
+
+ap_figure = xx.^2 + yy.^2 < (result.figure_size*wininfo.PixperDeg/2)^2;
+ap_ground = xx.^2 + yy.^2 < (result.ground_size*wininfo.PixperDeg/2)^2 & ~ap_figure;
+contextwidth = result.ground_size*wininfo.PixperDeg;
 
 assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
 
@@ -152,6 +162,7 @@ gratingInfo.gtype = 'box';
 gratingInfo.circular = result.circular;
 width  =  PatchRadiusPix;
 gratingInfo.widthLUT = [result.sizes(:) width(:)];
+gratingInfo.stimduration = stimduration;
 result.gratingInfo = gratingInfo;
 
 %load('GammaTable.mat'); % need to do the gamma correction!!
@@ -240,7 +251,14 @@ else
 %             numFrames = numel(thisstim.tex);
             thisstim.movieDurationFrames = movieDurationFrames;
 %             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
-            thisstim = gen_gratings(wininfo,result.gratingInfo,thisstim);
+            aperture = zeros(wininfo.yRes,wininfo.xRes)<1;
+            if thisstim.thisfigurecontrast
+                aperture(ap_figure) = true;
+            end
+            if thisstim.thisgroundcontrast
+                aperture(ap_ground) = true;
+            end
+            thisstim = gen_translating_gratings(wininfo,result.gratingInfo,thisstim,aperture,contextwidth);
             
             result = deliver_stim(result,wininfo,thisstim,d);
             
@@ -345,7 +363,8 @@ terminate_udp(H_Run)
             result.gratingInfo.Size(trnum) = thiscond(2);
             result.gratingInfo.tFreq(trnum) = thiscond(3);
             result.gratingInfo.spFreq(trnum) = thiscond(4);
-            result.gratingInfo.Contrast(trnum) = thiscond(5);
+            result.gratingInfo.figureContrast(trnum) = thiscond(5);
+            result.gratingInfo.groundContrast(trnum) = thiscond(6);
     end
 
     function thisstim = getStim(gratingInfo,trnum)
@@ -355,7 +374,8 @@ terminate_udp(H_Run)
             thisstim.thissize = gratingInfo.Size(trnum);
             thisstim.thisspeed = gratingInfo.tFreq(trnum);
             thisstim.thisfreq = gratingInfo.spFreq(trnum);
-            thisstim.thiscontrast = gratingInfo.Contrast(trnum);
+            thisstim.thisfigurecontrast = gratingInfo.figureContrast(trnum);
+            thisstim.thisfigurecontrast = gratingInfo.groundContrast(trnum);
             thisstim.trnum = trnum;
     end
 end
