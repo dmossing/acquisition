@@ -23,7 +23,7 @@ thisdeg = thisstim.thisdeg;
 thiswidth = thisstim.thiswidth;
 thiscontextwidth = PixperDeg*contextwidth;
 thissize = thisstim.thissize;
-thiscontrast = thisstim.thiscontrast;
+thiscontrast = 1; %thisstim.thiscontrast;
 thisfreq = thisstim.thisfreq;
 thisspeed = thisstim.thisspeed;
 % if isnan(thisdeg) % kludge to allow for nan orientation to mean gray screen!
@@ -34,7 +34,7 @@ x0 = floor(xRes/2 + xposStim*PixperDeg - thissize.*PixperDeg/2);
 y0 = floor(yRes/2 - yposStim*PixperDeg - thissize.*PixperDeg/2);
 
 [x,y] = meshgrid([-thiswidth:thiswidth],[-thiswidth:thiswidth]);
-numFrames = ceil(frameRate/gratingInfo.stimduration);
+numFrames = ceil(frameRate*gratingInfo.stimduration);
 %     tic
 clear T G;
 phase = 0; %(i/numFrames)*2*pi;

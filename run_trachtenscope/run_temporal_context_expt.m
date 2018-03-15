@@ -1,4 +1,4 @@
-function run_visual_stim_expt_cleaned(varargin)
+function run_temporal_context_expt(varargin)
 
 p = inputParser;
 p.addParameter('modality','2p');
@@ -10,16 +10,16 @@ p.addParameter('stimduration',1);
 p.addParameter('isi',3);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
-p.addParameter('sizes',25);
-p.addParameter('sFreqs',0.08); % cyc/vis deg
-p.addParameter('tFreqs',1); % cyc/sec
+p.addParameter('sizes',10);
+p.addParameter('sFreqs',0.04); % cyc/vis deg
+p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
 % p.addParameter('contrast',1);
-p.addParameter('circular',0);
+p.addParameter('circular',1);
 p.addParameter('figure_contrast',[0 1]);
 p.addParameter('ground_contrast',[0 1]);
 p.addParameter('figure_size',20);
-p.addParameter('ground_size',60);
+p.addParameter('ground_size',50);
 p.parse(varargin{:});
 
 % choose parameters
@@ -36,15 +36,15 @@ allConds  =  prod(nConds);
 % repPerCond  =  allConds./nConds;
 conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.figure_contrast,result.ground_contrast);
 
+assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
+
+wininfo = gen_wininfo(result);
+
 [xx,yy] = meshgrid(-wininfo.xRes/2+1:wininfo.xRes/2,-wininfo.yRes/2+1:wininfo.yRes/2);
 
 ap_figure = xx.^2 + yy.^2 < (result.figure_size*wininfo.PixperDeg/2)^2;
 ap_ground = xx.^2 + yy.^2 < (result.ground_size*wininfo.PixperDeg/2)^2 & ~ap_figure;
-contextwidth = result.ground_size*wininfo.PixperDeg;
-
-assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
-
-wininfo = gen_wininfo(result);
+contextwidth = result.ground_size; %*wininfo.PixperDeg;
 
 movieDurationSecs = result.stimduration;
 movieDurationFrames = round(movieDurationSecs * wininfo.frameRate);
@@ -203,10 +203,12 @@ else
     t0  =  GetSecs;
     trnum = 0;
     
+    stimParams = [];
+    
     % set up to show stimuli
     for itrial = 1:result.repetitions,
-        theseinds = randperm(result.allConds);
-        theseconds = result.conds(:,theseinds);
+        theseinds = randperm(allConds);
+        theseconds = conds(:,theseinds);
         stimParams = [stimParams theseconds];
         
 %         % randomize direction 50/50%
@@ -222,7 +224,7 @@ else
         
 %         conddone = 1:size(conds,2);
 %         while ~isempty(tmpcond)
-        for istim = 1:result.allConds,
+        for istim = 1:allConds,
             %             [kinp,tkinp] = GetChar;
             
             disp('Signal on 2')
@@ -236,10 +238,10 @@ else
 %             cnum = conddone(thiscondind);
 %             conddone(thiscondind)  =  [];
 %             tmpcond(:,thiscondind)  =  []
-            thiscond = theseconds(istim);
+            thiscond = theseconds(:,istim);
             result = pickNext(result,trnum,thiscond);
             Trialnum(trnum) = trnum;
-            Condnum(trnum) = cnum;
+%             Condnum(trnum) = cnum;
             Repnum(trnum) = itrial;
             result = pickNext(result,trnum,thiscond);
             % end save information
@@ -251,7 +253,7 @@ else
 %             numFrames = numel(thisstim.tex);
             thisstim.movieDurationFrames = movieDurationFrames;
 %             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
-            aperture = zeros(wininfo.yRes,wininfo.xRes)<1;
+            aperture = zeros(wininfo.yRes,wininfo.xRes)==1;
             if thisstim.thisfigurecontrast
                 aperture(ap_figure) = true;
             end
@@ -375,7 +377,7 @@ terminate_udp(H_Run)
             thisstim.thisspeed = gratingInfo.tFreq(trnum);
             thisstim.thisfreq = gratingInfo.spFreq(trnum);
             thisstim.thisfigurecontrast = gratingInfo.figureContrast(trnum);
-            thisstim.thisfigurecontrast = gratingInfo.groundContrast(trnum);
+            thisstim.thisgroundcontrast = gratingInfo.groundContrast(trnum);
             thisstim.trnum = trnum;
     end
 end

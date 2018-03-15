@@ -1,7 +1,0 @@
-function solidFrame = gensolidFrame(screenInfo,size,color)
-if nargin < 2
-    color = screenInfo.Bcol;
-end
-solidFrame = Screen('MakeTexture', screenInfo.window, color);
-end
-

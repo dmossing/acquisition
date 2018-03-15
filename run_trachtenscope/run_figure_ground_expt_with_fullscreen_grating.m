@@ -7,15 +7,16 @@ p.addParameter('depth','000');
 p.addParameter('orientations',0:45:315);
 p.addParameter('repetitions',10);
 p.addParameter('stimduration',1);
-p.addParameter('isi',3);
+p.addParameter('isi',1);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
 p.addParameter('sizes',25);
-p.addParameter('sFreqs',0.04); % cyc/vis deg
+p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',[0 1]);
 p.addParameter('groundContrast',[0 1]);
+p.addParameter('circular',0);
 p.parse(varargin{:});
 
 % choose parameters
@@ -160,6 +161,7 @@ gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
 gratingInfo.Bcol = 128; % Background 0 black, 255 white
 gratingInfo.method = 'symmetric';
 gratingInfo.gtype = 'box';
+gratingInfo.circular = result.circular;
 width  =  PatchRadiusPix;
 gratingInfo.widthLUT = [result.sizes(:) width(:)];
 gratingInfo.widthLUT = [gratingInfo.widthLUT; 0 0];

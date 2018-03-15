@@ -3,6 +3,8 @@ gf = gratingInfo.gf;%.Gaussian width factor 5: reveal all .5 normal fall off
 Bcol = gratingInfo.Bcol; % Background 0 black, 255 white
 method = gratingInfo.method;
 gtype = gratingInfo.gtype;
+circular = gratingInfo.circular;
+
 % gtype = 'sine';
 
 xRes = wininfo.xRes;
@@ -63,7 +65,14 @@ for i=1:numFrames
     end
     
     T = Gbg;
-    T(y0:y0+size(G,2)-1,x0:x0+size(G,2)-1) = G;
+    if circular
+        aux = T(y0:y0+size(G,2)-1,x0:x0+size(G,2)-1);
+        se = strel('disk',thiswidth,0);
+        aux(se.Neighborhood) = G(se.Neighborhood);
+        T(y0:y0+size(G,2)-1,x0:x0+size(G,2)-1) = aux;
+    else
+        T(y0:y0+size(G,2)-1,x0:x0+size(G,2)-1) = G;
+    end
     toc
     tic
     tex(i) = Screen('MakeTexture', w, T);
