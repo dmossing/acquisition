@@ -29,8 +29,8 @@ Screen('Preference','SkipSyncTests', 0);
 VertScreenDimDeg = atand(result.VertScreenSize/result.DScreen); % in visual degrees
 PixperDeg = yRes/VertScreenDimDeg;
 try
-    xposStim = result.position(1);
-    yposStim = result.position(2);
+    xposStim = result.position(:,1);
+    yposStim = result.position(:,2);
 catch
     xposStim = NaN;
     yposStim = NaN;
