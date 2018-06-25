@@ -13,7 +13,11 @@ frameRate = screenInfo.frameRate;
 sizeGrating = gratingSize*PixperDeg;
 width = round(sizeGrating/2);
 
-[x,y]=meshgrid([-width:width],[-width:width]);
+if isfield(gratingInfo,'fullScreen') && gratingInfo.fullScreen
+    [x,y] = meshgrid([-screenInfo.xRes/2:screenInfo.xRes/2],[-screenInfo.yRes/2:screenInfo.yRes/2]);
+else
+    [x,y]=meshgrid([-width:width],[-width:width]);
+end
 
 phase=(t/frameRate*tFreq)*2*pi;
 angle=orientation*pi/180; % 30 deg orientation.

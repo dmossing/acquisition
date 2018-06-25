@@ -1,4 +1,4 @@
-function run_apertured_rotated_movie_expt(varargin)
+function run_movie_expt(varargin)
 
 p = inputParser;
 p.addParameter('modality','2p');
@@ -20,10 +20,6 @@ p.parse(varargin{:});
 result = p.Results;
 
 load(result.moviefname,'frames')
-% rotated_frames = frames;
-% for i=1:size(frames,3)
-%     rotated_frames(:,:,i) = rot90(frames(:,:,i));
-% end
 
 isi = result.isi;
 % stimduration = result.stimduration;
@@ -161,20 +157,16 @@ result.gratingInfo = gratingInfo;
 load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
-% PsychImaging('PrepareConfiguration');
-% 
-% PsychImaging('AddTask', 'General', 'UsePanelFitter', [wininfo.xRes,wininfo.yRes], 'Aspect');
-
 Screen('DrawTexture',wininfo.w, wininfo.BG);
 Screen('TextFont',wininfo.w, 'Courier New');
-Screen('TextSize',wininfo.w, 7);
+Screen('TextSize',wininfo.w, 14);
 Screen('TextStyle', wininfo.w, 1+2);
 % Screen('DrawText', wininfo.w, strcat(num2str(allConds),' Conditions__',...
 %     num2str(result.repetitions),' Repeats__',...
 %     num2str(allConds*result.repetitions*(isi+stimduration)/60),...
 %     ' min estimated Duration.'), 60, 50, [255 128 0]);
 Screen('DrawText', wininfo.w, strcat('Filename:',fnameLocal,...
-    '    Hit any key to continue / q to abort.'), 30, 35, [255 128 0]);
+    '    Hit any key to continue / q to abort.'), 60, 70, [255 128 0]);
 Screen('Flip',wininfo.w);
 
 FlushEvents;
@@ -188,7 +180,7 @@ else
     if strcmp(result.modality,'2p')
         fprintf(H_Scanbox,'G'); %go
     end
-    pause(1);
+    pause(5);
     
     Screen('DrawTexture',wininfo.w, wininfo.BG);
     Screen('Flip', wininfo.w);
@@ -196,7 +188,7 @@ else
     
     t0  =  GetSecs;
     trnum = 0;
-    
+        
     thisstim.trnum = 1;
     
     if isempty(result.sizes) %%% GOTO
@@ -205,78 +197,44 @@ else
         [xx,yy] = meshgrid(1:size(frames,2),1:size(frames,1));
         aperture = (xx-x0).^2 + (yy-y0).^2 < PatchRadiusPix^2;
     end
+        
     
-    conds = makeAllCombos([NaN 0 90],[NaN 0 90]);
-    conds(:,sum(~isnan(conds))==0) = [];
-    allConds = size(conds,2);
-    stimParams = [];
-    lut = 'NaN = no contrast, 0 = not rotated, 90 = rotated 90 deg. First number, center; second number, surround';
-    for istim = 1:result.repetitions,
-        theseinds = randperm(allConds);
-        theseconds = conds(:,theseinds);
-        stimParams = [stimParams theseconds];
-        for itrial=1:allConds
-            thisaperture = aperture;
-            if isnan(theseconds(1,itrial))
-%                 thisaperture(aperture) = false;
-                show_center = false;
-                rotate_center = false;
-            elseif theseconds(1,itrial)
-                show_center = true;
-                rotate_center = true;
-            else
-                show_center = true;
-                rotate_center = false;
-            end
-            if isnan(theseconds(2,itrial))
-%                 thisaperture(~aperture) = false;
-                show_surround = false;
-                rotate_surround = false;
-            elseif theseconds(2,itrial)
-                show_surround = true;
-                rotate_surround = true;
-            else
-                show_surround = true;
-                rotate_surround = false;
-            end
-                
-            %         thisaperture = aperture;
-            %         rotate_surround = false;
-%             if theseconds(itrial)==1
-%                 thisaperture = ~aperture;
-%                 rotate_surround = false;
-%             elseif theseconds(itrial)==2
-%                 thisaperture = ~aperture;
-%                 rotate_surround = true;
-%             elseif theseconds(itrial)==3
-%                 thisaperture = ~aperture;
-%                 rotate_surround = false;
-%             elseif theseconds(itrial)==4
-%                 thisaperture = aperture;
-%                 rotate_surround = true;
-%             end
-            
-            %             thisstim = getStim(result.gratingInfo,trnum);
-            %             thisstim.itrial = itrial;
-            trialstart = GetSecs-t0;
-            thisstim.tex = gen_textures(wininfo,frames,thisaperture,show_center,show_surround,rotate_center,rotate_surround); %  pretex(theseinds(itrial)).tex; %
-            numFrames = numel(thisstim.tex);
-            thisstim.movieDurationFrames = numFrames;
-            thisstim.movieFrameIndices = mod(0:(thisstim.movieDurationFrames-1), numFrames) + 1;
-            result = deliver_stim(result,wininfo,thisstim,d);
-            
-            [keyIsDown, secs, keyCode] = KbCheck;
-            if keyIsDown & KbName(keyCode) == 'p'
-                KbWait([],2);
-                %wait for all keys to be released and then any key to be pressed again
-            end
-            thisstim.trnum = thisstim.trnum+1;
+    % set up to show stimuli
+    for itrial = 1:result.repetitions,
+        thisaperture = aperture;
+        rotate_surround = false;
+%         if mod(itrial,4) == 0
+%             thisaperture = [];
+%             rotate_surround = false;
+%         elseif mod(itrial,4) == 1
+%             thisaperture = ~aperture;
+%             rotate_surround = false;
+%         elseif mod(itrial,4) == 2
+%             thisaperture = aperture;
+%             rotate_surround = false;
+%         elseif mod(itrial,4) == 3
+%             thisaperture = aperture;
+%             rotate_surround = true;
+%         end
+        %             thisstim = getStim(result.gratingInfo,trnum);
+        %             thisstim.itrial = itrial;
+        trialstart = GetSecs-t0;
+        thisstim.tex = gen_textures(wininfo,frames,thisaperture,rotate_surround);
+        numFrames = numel(thisstim.tex);
+        thisstim.movieDurationFrames = numFrames;
+        thisstim.movieFrameIndices = mod(0:(thisstim.movieDurationFrames-1), numFrames) + 1;
+        result = deliver_stim(result,wininfo,thisstim,d);
+        
+        [keyIsDown, secs, keyCode] = KbCheck;
+        if keyIsDown & KbName(keyCode) == 'p'
+            KbWait([],2);
+            %wait for all keys to be released and then any key to be pressed again
         end
+        thisstim.trnum = thisstim.trnum+1;
     end
 end
 
-result.stimParams = stimParams;%(:,Condnum);
-result.stimLUT = lut;
+% result.stimParams = conds(:,Condnum);
 result.dispInfo.xRes  =  wininfo.xRes;
 result.dispInfo.yRes  =  wininfo.yRes;
 result.dispInfo.DScreen  =  result.DScreen;
@@ -321,7 +279,6 @@ terminate_udp(H_Run)
         Priority(priorityLevel);
         
         %--
-%         PsychImaging('AddTask', 'General', 'UsePanelFitter', [wininfo.xRes,wininfo.yRes], 'Aspect');
         Screen('DrawTexture',w,BG);
         % Screen('DrawText', w, ['trial ' int2str(thisstim.trnum) '/' ...
         %     int2str(allConds) 'repetition ' int2str(thisstim.itrial) '/'...
@@ -329,6 +286,7 @@ terminate_udp(H_Run)
         Screen('Flip', w);
         
         WaitSecs(max(0, result.isi-((GetSecs-t0)-trialstart)));
+        
         Screen('DrawTexture',w,BG);
         fliptime  =  Screen('Flip', w);
         WaitSecs(max(0,prestimtimems/1000));
@@ -362,4 +320,25 @@ terminate_udp(H_Run)
         Screen('Flip', w);
         Screen('Close',thisstim.tex(:));
     end
+
 end
+
+%     function result = pickNext(result,trnum,thiscond)
+%             result.gratingInfo.Orientation(trnum) = thiscond(1);
+%             % don't do this anymore, now happens while building conds: +((randi(2)-1)*180);
+%             result.gratingInfo.Size(trnum) = thiscond(2);
+%             result.gratingInfo.tFreq(trnum) = thiscond(3);
+%             result.gratingInfo.spFreq(trnum) = thiscond(4);
+%             result.gratingInfo.Contrast(trnum) = thiscond(5);
+%     end
+%
+%     function thisstim = getStim(gratingInfo,trnum)
+%             bin = (gratingInfo.widthLUT(:,1) == gratingInfo.Size(trnum));
+%             thisstim.thiswidth = gratingInfo.widthLUT(bin,2);
+%             thisstim.thisdeg = gratingInfo.Orientation(trnum);
+%             thisstim.thissize = gratingInfo.Size(trnum);
+%             thisstim.thisspeed = gratingInfo.tFreq(trnum);
+%             thisstim.thisfreq = gratingInfo.spFreq(trnum);
+%             thisstim.thiscontrast = gratingInfo.Contrast(trnum);
+%             thisstim.trnum = trnum;
+%     end
