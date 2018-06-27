@@ -89,24 +89,6 @@ err = DaqDConfigPort(d,0,0);
 fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
 fprintf(H_Scanbox,'G'); %go
 
-% pause(5)
-
-
-% set up msocket
-
-% srvsock = mslisten(3000);
-% % tell the other PC to open up a socket
-% DaqDOut(d,0,0);
-% DaqDOut(d,0,255);
-%
-% pause(3)
-% % % assume the other PC has responded by requesting a connection by this
-% % % point
-% sock = msaccept(srvsock);
-% msclose(srvsock);
-%
-% DaqDOut(d,0,255);
-% DaqDOut(d,0,0);
 
 frameRate = 60;     % Hz
 
@@ -120,10 +102,11 @@ try
     locs = tileSubScreen(result.sizes,wininfo,result.grid,result.range);
     [ny,nx,~] = size(locs);
     nori = numel(result.orientations);
-    [indy,indx] = meshgrid(1:ny,1:nx);
+    [indy,indx,indori] = meshgrid(1:ny,1:nx,1:nori);
     indy = [NaN; indy(:)];
     indx = [NaN; indx(:)];
-    nstims = 2*(ny*nx+1);
+    indori = [NaN; indori(:)];
+    nstims = 2*(ny*nx*nori+1);
     order = zeros(result.repetitions*nstims,1); % *2 for inverted and not; +1 for gray and full contrast screens
     for i=1:result.repetitions
         order((i-1)*nstims+1:i*nstims) = randperm(nstims);
@@ -131,45 +114,27 @@ try
     % 0 : uniform. 1:ny*nx : stim location
     spaceorder = rem(order-1,nstims/2)+1;
     inverted = (order > nstims/2);
-    locinds = [indy(spaceorder), indx(spaceorder)];
+    locinds = [indy(spaceorder), indx(spaceorder), indori(spaceorder)];
     result.locs = locs;
     result.locinds = locinds;
     result.inverted = inverted;
-    
-    % % % SEND THIS (locinds) TO OTHER PC VIA MSOCKET
-    %     pause(1)
-    %     mssend(sock,locinds)
     
     nCycles = 1;
     numEach = ceil(nCycles*frameRate/result.tFreq);
     numFrames = round(frameRate/result.rate);
     sizeGrating = ceil(result.sizes*wininfo.PixperDeg);
     for j = 1:nori
-        start = (j-1)*numEach;
         gratingInfo = gengratingInfo(result.sizes,result.spFreq,result.tFreq,result.orientations(j));
         for i = 1:numEach
             gratingInfo.fullScreen = true;
-            gratingFrame(start+i) = gengratingFrame(i,gratingInfo,wininfo);
+            gratingFrame(j,i) = gengratingFrame(i,gratingInfo,wininfo);
             gratingInfo.fullScreen = false;
-            gratingFrameSmall(start+i) = gengratingFrame(i,gratingInfo,wininfo);
+            gratingFrameSmall(j,i) = gengratingFrame(i,gratingInfo,wininfo);
         end
     end
-    %     for k = 1:result.ratio*numFrames
-    %         gratingInfo.fullScreen = true;
-    %         gratingFrame(numFrames+k) = gensolidFrame(wininfo,[wininfo.yRes,wininfo.xRes]);
-    %         gratingInfo.fullScreen = false;
-    %         gratingFrameSmall(numFrames+k) = gensolidFrame(wininfo,[wininfo.yRes,wininfo.xRes]);
-    %     end
+
     gratingInfo.fullScreen = true;
-    % generate gray frames for baseline acquisition
-    %     for j = 1:nori
-    %         for i = 1:numFrames
-    %             blankFrame(i) = gensolidFrame(wininfo);
-    %         end
-    %         for k = 1:result.ratio*numFrames
-    %             blankFrame(numFrames+k) = gensolidFrame(wininfo);
-    %         end
-    %     end
+
     grayFrame = Screen('MakeTexture', window, Bcol*ones(round(sizeGrating)));
     
     figRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
@@ -178,20 +143,6 @@ try
     buttons = 0; % When the user clicks the mouse, 'buttons' becomes nonzero.
     mX = 0; % The x-coordinate of the mouse cursor
     mY = 0; % The y-coordinate of the mouse cursor
-    % Draw the sprite at the new location.
-    %     while oriIndex <= nori
-    %         Screen('DrawTexture', window, blankFrame(blankFrameIndex), [0 0 1 1], CenterRectOnPoint([0 0 1 1], mX, mY));
-    %         % Call Screen('Flip') to update the screen.  Note that calling
-    %         % 'Flip' after we have both erased and redrawn the sprite prevents
-    %         % the sprite from flickering.
-    %         Screen('Flip', window);
-    %
-    %         blankFrameIndex = blankFrameIndex + 1;
-    %         if blankFrameIndex > (result.ratio+1)*numFrames
-    %             blankFrameIndex = 1;
-    %             oriIndex = oriIndex + 1;
-    %         end
-    %     end
     
     %     for repindex=1:result.repetitions
     for i=1:numel(order)
@@ -207,9 +158,11 @@ try
         if ~isnan(indy(spaceorder(i)))
             mY = locs(indy(spaceorder(i)),indx(spaceorder(i)),1);
             mX = locs(indy(spaceorder(i)),indx(spaceorder(i)),2);
+            mOri = indori(spaceorder(i));
         else
             mY = NaN;
             mX = NaN;
+            mOri = NaN;
         end
         % Draw the sprite at the new location.
         DaqDOut(d,0,0);
@@ -217,9 +170,11 @@ try
         DaqDOut(d,0,0);
         if inverted(i)
             while gratingFrameIndex < numFrames
-                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex));
                 if ~isnan(mX)
+                    Screen('DrawTexture', window, gratingFrame(mOri,gratingFrameIndex));
                     Screen('DrawTexture', window, grayFrame, figRect, CenterRectOnPoint(figRect, mX, mY));
+                else
+                    Screen('DrawTexture', window, gratingFrame(1,gratingFrameIndex)); % 0 degree baseline for full screen grating!
                 end
                 % Call Screen('Flip') to update the screen.  Note that calling
                 % 'Flip' after we have both erased and redrawn the sprite prevents
@@ -227,23 +182,12 @@ try
                 Screen('Flip', window);
                 gratingFrameIndex = gratingFrameIndex + 1;
             end
-            %             DaqDOut(d,0,127);
-            %             DaqDOut(d,0,255);
-            %             DaqDOut(d,0,0);
-            %             while gratingFrameIndex < (result.ratio+1)*numFrames
-            %                 Screen('DrawTexture', window, gratingFrame(gratingFrameIndex)); %, grayRect, CenterRectOnPoint(grayRect, mX, mY));
-            %                 Screen('DrawTexture', window, grayFrame, figRect, CenterRectOnPoint(figRect, mX, mY));
-            %                 % Call Screen('Flip') to update the screen.  Note that calling
-            %                 % 'Flip' after we have both erased and redrawn the sprite prevents
-            %                 % the sprite from flickering.
-            %                 Screen('Flip', window);
-            %                 gratingFrameIndex = gratingFrameIndex + 1;
-            %             end
+
         else
             Screen('DrawTexture',wininfo.w, wininfo.BG);
             while gratingFrameIndex < numFrames
                 if ~isnan(mX)
-                    Screen('DrawTexture', window, gratingFrameSmall(gratingFrameIndex), figRect, CenterRectOnPoint(figRect, mX, mY));
+                    Screen('DrawTexture', window, gratingFrameSmall(mOri,gratingFrameIndex), figRect, CenterRectOnPoint(figRect, mX, mY));
                 end
                 % Call Screen('Flip') to update the screen.  Note that calling
                 % 'Flip' after we have both erased and redrawn the sprite prevents
@@ -251,17 +195,7 @@ try
                 Screen('Flip', window);
                 gratingFrameIndex = gratingFrameIndex + 1;
             end
-            %             DaqDOut(d,0,127);
-            %             DaqDOut(d,0,255);
-            %             DaqDOut(d,0,0);
-            %             while gratingFrameIndex < (result.ratio+1)*numFrames
-            %                 Screen('DrawTexture', window, gratingFrameSmall(gratingFrameIndex), figRect, CenterRectOnPoint(figRect, mX, mY));
-            %                 % Call Screen('Flip') to update the screen.  Note that calling
-            %                 % 'Flip' after we have both erased and redrawn the sprite prevents
-            %                 % the sprite from flickering.
-            %                 Screen('Flip', window);
-            %                 gratingFrameIndex = gratingFrameIndex + 1;
-            %             end
+
         end
         %         end
     end
@@ -269,12 +203,6 @@ try
     DaqDOut(d,0,255);
     DaqDOut(d,0,0);
     
-    %     for i=1:10
-    %         DaqDOut(d,0,0);
-    %         DaqDOut(d,0,255);
-    %         DaqDOut(d,0,0);
-    %     end
-    %     msclose(sock);
     terminate_udp(H_Scanbox)
     terminate_udp(H_Run)
     
@@ -289,26 +217,15 @@ try
     save(fnameLocal, 'result');
     save(fnameRemote, 'result');
     
-    % Restore preferences
-    %     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
-    %     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
-    
 catch
     disp('error')
     % If there is an error in our try block, let's
     % return the user to the familiar MATLAB prompt.
     ShowCursor;
     Screen('CloseAll');
-    %     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
-    %     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
+
     psychrethrow(psychlasterror);
-    
-    %     for i=1:10
-    %         DaqDOut(d,0,0);
-    %         DaqDOut(d,0,255);
-    %         DaqDOut(d,0,0);
-    %     end
-    %     msclose(sock);
+
     terminate_udp(H_Scanbox)
     terminate_udp(H_Run)
     save(fnameLocal, 'result');
