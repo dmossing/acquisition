@@ -131,7 +131,7 @@ try
     % 0 : uniform. 1:ny*nx : stim location
     spaceorder = rem(order-1,nstims/2)+1;
     inverted = (order > nstims/2);
-    locinds(spaceorder) = [indy(spaceorder), indx(spaceorder)];
+    locinds = [indy(spaceorder), indx(spaceorder)];
     result.locs = locs;
     result.locinds = locinds;
     result.inverted = inverted;
@@ -142,7 +142,7 @@ try
     
     nCycles = 1;
     numEach = ceil(nCycles*frameRate/result.tFreq);
-    numFrames = round(frameRate/rate);
+    numFrames = round(frameRate/result.rate);
     sizeGrating = ceil(result.sizes*wininfo.PixperDeg);
     for j = 1:nori
         start = (j-1)*numEach;
@@ -192,7 +192,6 @@ try
     %             oriIndex = oriIndex + 1;
     %         end
     %     end
-    numFramesToShow = round(frameRate/repetition.rate);
     
     %     for repindex=1:result.repetitions
     for i=1:numel(order)
@@ -217,7 +216,7 @@ try
         DaqDOut(d,0,255);
         DaqDOut(d,0,0);
         if inverted(i)
-            while gratingFrameIndex < numFramesToShow
+            while gratingFrameIndex < numFrames
                 Screen('DrawTexture', window, gratingFrame(gratingFrameIndex));
                 if ~isnan(mX)
                     Screen('DrawTexture', window, grayFrame, figRect, CenterRectOnPoint(figRect, mX, mY));
@@ -242,7 +241,7 @@ try
             %             end
         else
             Screen('DrawTexture',wininfo.w, wininfo.BG);
-            while gratingFrameIndex < numFramesToShow
+            while gratingFrameIndex < numFrames
                 if ~isnan(mX)
                     Screen('DrawTexture', window, gratingFrameSmall(gratingFrameIndex), figRect, CenterRectOnPoint(figRect, mX, mY));
                 end
