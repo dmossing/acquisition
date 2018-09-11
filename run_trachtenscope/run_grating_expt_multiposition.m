@@ -1,4 +1,4 @@
-function run_figure_ground_expt(varargin)
+function run_grating_expt_multiposition(varargin)
 
 p = inputParser;
 p.addParameter('modality','2p');
@@ -7,15 +7,15 @@ p.addParameter('depth','000');
 p.addParameter('orientations',0:45:315);
 p.addParameter('repetitions',10);
 p.addParameter('stimduration',1);
-p.addParameter('isi',1);
+p.addParameter('isi',3);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
-p.addParameter('sizes',20);
+p.addParameter('sizes',25);
 p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',1); % cyc/sec
 p.addParameter('position',[0,0]);
-p.addParameter('contrast',[0 1]);
-p.addParameter('groundContrast',[0 1]);
+p.addParameter('contrast',1);
+p.addParameter('circular',0);
 p.parse(varargin{:});
 
 % choose parameters
@@ -26,11 +26,11 @@ isi = result.isi;
 stimduration = result.stimduration;
 
 % create all stimulus conditions from the single parameter vectors
-nConds  =  [length(result.orientations) length(result.sizes) length(result.tFreqs) length(result.sFreqs) length(result.contrast) length(result.groundContrast)];
+nConds  =  [length(result.orientations) length(result.sizes) length(result.tFreqs) length(result.sFreqs) length(result.contrast) size(result.position,1)];
 allConds  =  prod(nConds);
 % result.allConds = allConds;
 % repPerCond  =  allConds./nConds;
-conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast,result.groundContrast);
+conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast,result.position(:,1),result.position(:,2));
 
 assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
 
@@ -51,7 +51,7 @@ end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/excitation/mossing/visual_stim/';
+stimFolderRemote = '/home/visual-stim/excitation/visual_stim/';
 stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
@@ -71,16 +71,12 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '/home/visual-stim/excitation/running/';
-runfolder = [runpath dstr '/' base];
-% if ~exist(runfolder,'dir')
-%     mkdir(runfolder)
-% end
 runpath = '//adesnik2.ist.berkeley.edu/Excitation/mossing/running/';
+% runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
-% if ~exist(runfolder,'dir')
-%     mkdir(runfolder)
-% end
+if ~exist(runfolder,'dir')
+    mkdir(runfolder)
+end
 if strcmp(result.modality,'2p')
     
     % set up scanbox communication
@@ -111,7 +107,6 @@ else
     
     cleanup_udp_lf = onCleanup(@() terminate_udp(H_lf));
     runpath = '//E:LF2P/ ... NEED TO FILL IN';
-    sprintf(H_lf,sprintf('G%s/%s_%s_%s.dat', runfolder, base, depth, fileindex))
     fprintf(H_lf,sprintf('G%s/%s_%s_%s.dat', runfolder, base, depth, fileindex));
 end
 
@@ -149,11 +144,12 @@ AssertOpenGL;
 % result.frameRate  =  frameRate;
 
 [gratingInfo.Orientation,gratingInfo.Contrast,gratingInfo.spFreq,...
-    gratingInfo.tFreq, gratingInfo.Size, gratingInfo.groundContrast] = deal(zeros(1,allConds*result.repetitions));
+    gratingInfo.tFreq, gratingInfo.Size] = deal(zeros(1,allConds*result.repetitions));
 gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
 gratingInfo.Bcol = 128; % Background 0 black, 255 white
 gratingInfo.method = 'symmetric';
 gratingInfo.gtype = 'box';
+gratingInfo.circular = result.circular;
 width  =  PatchRadiusPix;
 gratingInfo.widthLUT = [result.sizes(:) width(:)];
 result.gratingInfo = gratingInfo;
@@ -235,10 +231,11 @@ else
             thisstim = getStim(result.gratingInfo,trnum);
             thisstim.itrial = itrial;
             
-            thisstim.tex = gen_ortho_gratings(wininfo,result.gratingInfo,thisstim);
-            numFrames = numel(thisstim.tex);
+%             thisstim.tex = gen_gratings(wininfo,result.gratingInfo,thisstim);
+%             numFrames = numel(thisstim.tex);
             thisstim.movieDurationFrames = movieDurationFrames;
-            thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
+%             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
+            thisstim = gen_gratings(wininfo,result.gratingInfo,thisstim);
             
             result = deliver_stim(result,wininfo,thisstim,d);
             
@@ -344,7 +341,8 @@ terminate_udp(H_Run)
             result.gratingInfo.tFreq(trnum) = thiscond(3);
             result.gratingInfo.spFreq(trnum) = thiscond(4);
             result.gratingInfo.Contrast(trnum) = thiscond(5);
-            result.gratingInfo.groundContrast(trnum) = thiscond(6);
+            result.gratingInfo.X(trnum) = thiscond(6);
+            result.gratingInfo.Y(trnum) = thiscond(7);
     end
 
     function thisstim = getStim(gratingInfo,trnum)
@@ -355,7 +353,8 @@ terminate_udp(H_Run)
             thisstim.thisspeed = gratingInfo.tFreq(trnum);
             thisstim.thisfreq = gratingInfo.spFreq(trnum);
             thisstim.thiscontrast = gratingInfo.Contrast(trnum);
-            thisstim.thisgcontrast = gratingInfo.groundContrast(trnum);
+            thisstim.thisx = gratingInfo.X(trnum);
+            thisstim.thisy = gratingInfo.Y(trnum);
             thisstim.trnum = trnum;
     end
 end

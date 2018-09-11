@@ -1,4 +1,4 @@
-function [xpos,ypos] = map_retinotopy_2p_spinning(varargin) %(ratio,orientations,DScreen,...
+function [xpos,ypos] = map_retinotopy_2p_occluder(varargin) %(ratio,orientations,DScreen,...
 %     ScreenType,gratingSize,spFreq,tFreq,nreps)
 
 p = inputParser;
@@ -173,12 +173,13 @@ try
     for j = 1:nori
         start = (j-1)*numEach;
         gratingInfo = gengratingInfo(result.sizes,result.spFreq,result.tFreq,result.orientations(j));
+        gratingInfo.fullScreen = true;
         for i = 1:numEach
             gratingFrame(start+i) = gengratingFrame(i,gratingInfo,wininfo);
         end
     end
     for k = 1:result.ratio*numFrames
-        gratingFrame(numFrames+k) = gensolidFrame(wininfo,sizeGrating);
+        gratingFrame(numFrames+k) = gensolidFrame(wininfo,[wininfo.yRes,wininfo.xRes]);
     end
     % generate gray frames for baseline acquisition
     for j = 1:nori
@@ -189,12 +190,13 @@ try
             blankFrame(numFrames+k) = gensolidFrame(wininfo);
         end
     end
+    grayFrame = Screen('MakeTexture', window, Bcol*ones(round(sizeGrating)));
     
     %     outputSingleScan(daq,[0 1 0])
     %     outputSingleScan(daq,[1 1 0])
     %     outputSingleScan(daq,[0 1 0])
     
-    gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
+    grayRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
     oriIndex = 1;
     blankFrameIndex = 1;
     buttons = 0; % When the user clicks the mouse, 'buttons' becomes nonzero.
@@ -227,7 +229,7 @@ try
     for repindex=1:result.repetitions
         for i=1:numel(order)
             % ------ Bookkeeping Variables ------
-            gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
+            grayRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
             gratingFrameIndex = 1; % Which frame of the animation should we show?
             %         oriIndex = indo(order(i));
             % We need to redraw the text or else it will disappear after a
@@ -242,7 +244,8 @@ try
             DaqDOut(d,0,255);
             DaqDOut(d,0,127);
             while gratingFrameIndex < (result.ratio)*numFrames
-                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
+                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex));
+                Screen('DrawTexture', window, grayFrame, grayRect, CenterRectOnPoint(grayRect, mX, mY));
                 % Call Screen('Flip') to update the screen.  Note that calling
                 % 'Flip' after we have both erased and redrawn the sprite prevents
                 % the sprite from flickering.
@@ -253,7 +256,7 @@ try
             DaqDOut(d,0,255);
             DaqDOut(d,0,0);
             while gratingFrameIndex < (result.ratio+1)*numFrames
-                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
+                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex)); %, grayRect, CenterRectOnPoint(grayRect, mX, mY));
                 % Call Screen('Flip') to update the screen.  Note that calling
                 % 'Flip' after we have both erased and redrawn the sprite prevents
                 % the sprite from flickering.

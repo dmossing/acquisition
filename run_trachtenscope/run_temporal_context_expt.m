@@ -1,4 +1,4 @@
-function run_figure_ground_expt(varargin)
+function run_temporal_context_expt(varargin)
 
 p = inputParser;
 p.addParameter('modality','2p');
@@ -7,15 +7,19 @@ p.addParameter('depth','000');
 p.addParameter('orientations',0:45:315);
 p.addParameter('repetitions',10);
 p.addParameter('stimduration',1);
-p.addParameter('isi',1);
+p.addParameter('isi',3);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
-p.addParameter('sizes',20);
-p.addParameter('sFreqs',0.08); % cyc/vis deg
-p.addParameter('tFreqs',1); % cyc/sec
+p.addParameter('sizes',10);
+p.addParameter('sFreqs',0.04); % cyc/vis deg
+p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
-p.addParameter('contrast',[0 1]);
-p.addParameter('groundContrast',[0 1]);
+% p.addParameter('contrast',1);
+p.addParameter('circular',1);
+p.addParameter('figure_contrast',[0 1]);
+p.addParameter('ground_contrast',[0 1]);
+p.addParameter('figure_size',20);
+p.addParameter('ground_size',50);
 p.parse(varargin{:});
 
 % choose parameters
@@ -26,15 +30,21 @@ isi = result.isi;
 stimduration = result.stimduration;
 
 % create all stimulus conditions from the single parameter vectors
-nConds  =  [length(result.orientations) length(result.sizes) length(result.tFreqs) length(result.sFreqs) length(result.contrast) length(result.groundContrast)];
+nConds  =  [length(result.orientations) length(result.sizes) length(result.tFreqs) length(result.sFreqs) length(result.figure_contrast) length(result.ground_contrast)];
 allConds  =  prod(nConds);
 % result.allConds = allConds;
 % repPerCond  =  allConds./nConds;
-conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast,result.groundContrast);
+conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.figure_contrast,result.ground_contrast);
 
 assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
 
 wininfo = gen_wininfo(result);
+
+[xx,yy] = meshgrid(-wininfo.xRes/2+1:wininfo.xRes/2,-wininfo.yRes/2+1:wininfo.yRes/2);
+
+ap_figure = xx.^2 + yy.^2 < (result.figure_size*wininfo.PixperDeg/2)^2;
+ap_ground = xx.^2 + yy.^2 < (result.ground_size*wininfo.PixperDeg/2)^2 & ~ap_figure;
+contextwidth = result.ground_size; %*wininfo.PixperDeg;
 
 movieDurationSecs = result.stimduration;
 movieDurationFrames = round(movieDurationSecs * wininfo.frameRate);
@@ -51,7 +61,7 @@ end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/excitation/mossing/visual_stim/';
+stimFolderRemote = '/home/visual-stim/excitation/visual_stim/';
 stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
@@ -71,16 +81,12 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '/home/visual-stim/excitation/running/';
-runfolder = [runpath dstr '/' base];
-% if ~exist(runfolder,'dir')
-%     mkdir(runfolder)
-% end
 runpath = '//adesnik2.ist.berkeley.edu/Excitation/mossing/running/';
+% runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
-% if ~exist(runfolder,'dir')
-%     mkdir(runfolder)
-% end
+if ~exist(runfolder,'dir')
+    mkdir(runfolder)
+end
 if strcmp(result.modality,'2p')
     
     % set up scanbox communication
@@ -111,7 +117,6 @@ else
     
     cleanup_udp_lf = onCleanup(@() terminate_udp(H_lf));
     runpath = '//E:LF2P/ ... NEED TO FILL IN';
-    sprintf(H_lf,sprintf('G%s/%s_%s_%s.dat', runfolder, base, depth, fileindex))
     fprintf(H_lf,sprintf('G%s/%s_%s_%s.dat', runfolder, base, depth, fileindex));
 end
 
@@ -149,13 +154,15 @@ AssertOpenGL;
 % result.frameRate  =  frameRate;
 
 [gratingInfo.Orientation,gratingInfo.Contrast,gratingInfo.spFreq,...
-    gratingInfo.tFreq, gratingInfo.Size, gratingInfo.groundContrast] = deal(zeros(1,allConds*result.repetitions));
+    gratingInfo.tFreq, gratingInfo.Size] = deal(zeros(1,allConds*result.repetitions));
 gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
 gratingInfo.Bcol = 128; % Background 0 black, 255 white
 gratingInfo.method = 'symmetric';
 gratingInfo.gtype = 'box';
+gratingInfo.circular = result.circular;
 width  =  PatchRadiusPix;
 gratingInfo.widthLUT = [result.sizes(:) width(:)];
+gratingInfo.stimduration = stimduration;
 result.gratingInfo = gratingInfo;
 
 %load('GammaTable.mat'); % need to do the gamma correction!!
@@ -196,9 +203,13 @@ else
     t0  =  GetSecs;
     trnum = 0;
     
+    stimParams = [];
+    
     % set up to show stimuli
     for itrial = 1:result.repetitions,
-        tmpcond = conds;
+        theseinds = randperm(allConds);
+        theseconds = conds(:,theseinds);
+        stimParams = [stimParams theseconds];
         
 %         % randomize direction 50/50%
 %         for i = 1:length(orientations)
@@ -211,8 +222,9 @@ else
 %             tmpcond(1,thisoriinds(rp(1:floor(length(rp)/2)))) = orientations(i)+180;
 %         end
         
-        conddone = 1:size(conds,2);
-        while ~isempty(tmpcond)
+%         conddone = 1:size(conds,2);
+%         while ~isempty(tmpcond)
+        for istim = 1:allConds,
             %             [kinp,tkinp] = GetChar;
             
             disp('Signal on 2')
@@ -221,13 +233,15 @@ else
             trialstart = GetSecs-t0;
             
             % Information to save in datafile:
-            thiscondind = ceil(rand*size(tmpcond,2));
-            thiscond = tmpcond(:,thiscondind);
-            cnum = conddone(thiscondind);
-            conddone(thiscondind)  =  [];
-            tmpcond(:,thiscondind)  =  [];
+%             thiscondind = ceil(rand*size(tmpcond,2));
+%             thiscond = tmpcond(:,thiscondind);
+%             cnum = conddone(thiscondind);
+%             conddone(thiscondind)  =  [];
+%             tmpcond(:,thiscondind)  =  []
+            thiscond = theseconds(:,istim);
+            result = pickNext(result,trnum,thiscond);
             Trialnum(trnum) = trnum;
-            Condnum(trnum) = cnum;
+%             Condnum(trnum) = cnum;
             Repnum(trnum) = itrial;
             result = pickNext(result,trnum,thiscond);
             % end save information
@@ -235,10 +249,18 @@ else
             thisstim = getStim(result.gratingInfo,trnum);
             thisstim.itrial = itrial;
             
-            thisstim.tex = gen_ortho_gratings(wininfo,result.gratingInfo,thisstim);
-            numFrames = numel(thisstim.tex);
+%             thisstim.tex = gen_gratings(wininfo,result.gratingInfo,thisstim);
+%             numFrames = numel(thisstim.tex);
             thisstim.movieDurationFrames = movieDurationFrames;
-            thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
+%             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
+            aperture = zeros(wininfo.yRes,wininfo.xRes)==1;
+            if thisstim.thisfigurecontrast
+                aperture(ap_figure) = true;
+            end
+            if thisstim.thisgroundcontrast
+                aperture(ap_ground) = true;
+            end
+            thisstim = gen_translating_gratings(wininfo,result.gratingInfo,thisstim,aperture,contextwidth);
             
             result = deliver_stim(result,wininfo,thisstim,d);
             
@@ -250,7 +272,7 @@ else
         end
     end
     
-    result.stimParams = conds(:,Condnum);
+    result.stimParams = stimParams; % conds(:,Condnum);
     result.dispInfo.xRes  =  wininfo.xRes; 
     result.dispInfo.yRes  =  wininfo.yRes;
     result.dispInfo.DScreen  =  result.DScreen; 
@@ -343,7 +365,7 @@ terminate_udp(H_Run)
             result.gratingInfo.Size(trnum) = thiscond(2);
             result.gratingInfo.tFreq(trnum) = thiscond(3);
             result.gratingInfo.spFreq(trnum) = thiscond(4);
-            result.gratingInfo.Contrast(trnum) = thiscond(5);
+            result.gratingInfo.figureContrast(trnum) = thiscond(5);
             result.gratingInfo.groundContrast(trnum) = thiscond(6);
     end
 
@@ -354,8 +376,8 @@ terminate_udp(H_Run)
             thisstim.thissize = gratingInfo.Size(trnum);
             thisstim.thisspeed = gratingInfo.tFreq(trnum);
             thisstim.thisfreq = gratingInfo.spFreq(trnum);
-            thisstim.thiscontrast = gratingInfo.Contrast(trnum);
-            thisstim.thisgcontrast = gratingInfo.groundContrast(trnum);
+            thisstim.thisfigurecontrast = gratingInfo.figureContrast(trnum);
+            thisstim.thisgroundcontrast = gratingInfo.groundContrast(trnum);
             thisstim.trnum = trnum;
     end
 end

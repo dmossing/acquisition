@@ -1,4 +1,4 @@
-function [xpos,ypos] = map_retinotopy_2p_spinning(varargin) %(ratio,orientations,DScreen,...
+function [xpos,ypos] = map_retinotopy_2p_occluder(varargin) %(ratio,orientations,DScreen,...
 %     ScreenType,gratingSize,spFreq,tFreq,nreps)
 
 p = inputParser;
@@ -154,11 +154,14 @@ try
     [ny,nx,~] = size(locs);
     nori = numel(result.orientations);
     [indy,indx] = meshgrid(1:ny,1:nx);
-    order = randperm(ny*nx);
-    locinds = [indy(order); indx(order)]';
+    order = randperm(ny*nx*2);
+    spaceorder = 1+rem(order-1,ny*nx);
+    inverted = (order > ny*nx);
+    locinds = [indy(spaceorder); indx(spaceorder)]';
     locinds = repmat(locinds,result.repetitions,1);
     result.locs = locs;
     result.locinds = locinds;
+    result.inverted = inverted;
     
     % % % SEND THIS (locinds) TO OTHER PC VIA MSOCKET
     %     pause(1)
@@ -174,12 +177,19 @@ try
         start = (j-1)*numEach;
         gratingInfo = gengratingInfo(result.sizes,result.spFreq,result.tFreq,result.orientations(j));
         for i = 1:numEach
+            gratingInfo.fullScreen = true;
             gratingFrame(start+i) = gengratingFrame(i,gratingInfo,wininfo);
+            gratingInfo.fullScreen = false;
+            gratingFrameSmall(start+i) = gengratingFrame(i,gratingInfo,wininfo);
         end
     end
     for k = 1:result.ratio*numFrames
-        gratingFrame(numFrames+k) = gensolidFrame(wininfo,sizeGrating);
+        gratingInfo.fullScreen = true;
+        gratingFrame(numFrames+k) = gensolidFrame(wininfo,[wininfo.yRes,wininfo.xRes]);
+        gratingInfo.fullScreen = false;
+        gratingFrameSmall(numFrames+k) = gensolidFrame(wininfo,[wininfo.yRes,wininfo.xRes]);
     end
+    gratingInfo.fullScreen = true;
     % generate gray frames for baseline acquisition
     for j = 1:nori
         for i = 1:numFrames
@@ -189,12 +199,13 @@ try
             blankFrame(numFrames+k) = gensolidFrame(wininfo);
         end
     end
+    grayFrame = Screen('MakeTexture', window, Bcol*ones(round(sizeGrating)));
     
     %     outputSingleScan(daq,[0 1 0])
     %     outputSingleScan(daq,[1 1 0])
     %     outputSingleScan(daq,[0 1 0])
     
-    gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
+    figRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
     oriIndex = 1;
     blankFrameIndex = 1;
     buttons = 0; % When the user clicks the mouse, 'buttons' becomes nonzero.
@@ -227,7 +238,7 @@ try
     for repindex=1:result.repetitions
         for i=1:numel(order)
             % ------ Bookkeeping Variables ------
-            gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
+            figRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
             gratingFrameIndex = 1; % Which frame of the animation should we show?
             %         oriIndex = indo(order(i));
             % We need to redraw the text or else it will disappear after a
@@ -235,34 +246,56 @@ try
             Screen('DrawTexture',wininfo.w, wininfo.BG);
             Screen('Flip', wininfo.w);
             Screen('DrawText', window, 'Click to exit', 0, 0, wininfo.blI);
-            mY = locs(indy(order(i)),indx(order(i)),1);
-            mX = locs(indy(order(i)),indx(order(i)),2);
+            mY = locs(indy(spaceorder(i)),indx(spaceorder(i)),1);
+            mX = locs(indy(spaceorder(i)),indx(spaceorder(i)),2);
             % Draw the sprite at the new location.
             DaqDOut(d,0,0);
             DaqDOut(d,0,255);
             DaqDOut(d,0,127);
-            while gratingFrameIndex < (result.ratio)*numFrames
-                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
-                % Call Screen('Flip') to update the screen.  Note that calling
-                % 'Flip' after we have both erased and redrawn the sprite prevents
-                % the sprite from flickering.
-                Screen('Flip', window);
-                gratingFrameIndex = gratingFrameIndex + 1;
+            if inverted(i)
+                while gratingFrameIndex < (result.ratio)*numFrames
+                    Screen('DrawTexture', window, gratingFrame(gratingFrameIndex));
+                    Screen('DrawTexture', window, grayFrame, figRect, CenterRectOnPoint(figRect, mX, mY));
+                    % Call Screen('Flip') to update the screen.  Note that calling
+                    % 'Flip' after we have both erased and redrawn the sprite prevents
+                    % the sprite from flickering.
+                    Screen('Flip', window);
+                    gratingFrameIndex = gratingFrameIndex + 1;
+                end
+                DaqDOut(d,0,127);
+                DaqDOut(d,0,255);
+                DaqDOut(d,0,0);
+                while gratingFrameIndex < (result.ratio+1)*numFrames
+                    Screen('DrawTexture', window, gratingFrame(gratingFrameIndex)); %, grayRect, CenterRectOnPoint(grayRect, mX, mY));
+                    Screen('DrawTexture', window, grayFrame, figRect, CenterRectOnPoint(figRect, mX, mY));
+                    % Call Screen('Flip') to update the screen.  Note that calling
+                    % 'Flip' after we have both erased and redrawn the sprite prevents
+                    % the sprite from flickering.
+                    Screen('Flip', window);
+                    gratingFrameIndex = gratingFrameIndex + 1;
+                end
+            else
+                Screen('DrawTexture',wininfo.w, wininfo.BG);
+                while gratingFrameIndex < (result.ratio)*numFrames
+                    Screen('DrawTexture', window, gratingFrameSmall(gratingFrameIndex), figRect, CenterRectOnPoint(figRect, mX, mY));
+                    % Call Screen('Flip') to update the screen.  Note that calling
+                    % 'Flip' after we have both erased and redrawn the sprite prevents
+                    % the sprite from flickering.
+                    Screen('Flip', window);
+                    gratingFrameIndex = gratingFrameIndex + 1;
+                end
+                DaqDOut(d,0,127);
+                DaqDOut(d,0,255);
+                DaqDOut(d,0,0);
+                while gratingFrameIndex < (result.ratio+1)*numFrames
+                    Screen('DrawTexture', window, gratingFrameSmall(gratingFrameIndex), figRect, CenterRectOnPoint(figRect, mX, mY));
+                    % Call Screen('Flip') to update the screen.  Note that calling
+                    % 'Flip' after we have both erased and redrawn the sprite prevents
+                    % the sprite from flickering.
+                    Screen('Flip', window);
+                    gratingFrameIndex = gratingFrameIndex + 1;
+                end
             end
-            DaqDOut(d,0,127);
-            DaqDOut(d,0,255);
-            DaqDOut(d,0,0);
-            while gratingFrameIndex < (result.ratio+1)*numFrames
-                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
-                % Call Screen('Flip') to update the screen.  Note that calling
-                % 'Flip' after we have both erased and redrawn the sprite prevents
-                % the sprite from flickering.
-                Screen('Flip', window);
-                gratingFrameIndex = gratingFrameIndex + 1;
-            end
-            %         outputSingleScan(daq,[0 1 0])
-            %         outputSingleScan(daq,[1 1 0])
-            %         outputSingleScan(daq,[0 1 0])
         end
     end
     
