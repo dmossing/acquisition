@@ -96,32 +96,27 @@ base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
 
-d = DaqFind;
-err = DaqDConfigPort(d,0,0);
+wininfo = gen_wininfo(result);
 
 % % write filename
 
 fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
 fprintf(H_Scanbox,'G'); %go
 
-pause(5)
+DaqDOut(d,0,0);
+DaqDOut(d,0,255);
 
-% daq=daq.createSession('ni');
-% addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
-% addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
-% addDigitalChannel(daq,'Dev3','port0/line2','OutputOnly'); % complete stim protocol, move in z
+handshook = false;
+while ~handshook
+    TTLin = DaqDIn(d);
+    handshook = TTLin(end)>128;
+end
 
 % set up msocket
 
 srvsock = mslisten(3000);
-% % tell the other PC to open up a socket
-% % outputSingleScan(daq,[0 0 0]);
-% % outputSingleScan(daq,[1 0 0]);
-% % outputSingleScan(daq,[0 0 0]);
-DaqDOut(d,0,0);
-DaqDOut(d,0,255);
 
-pause(3)
+% pause(3)
 % % assume the other PC has responded by requesting a connection by this
 % % point
 sock = msaccept(srvsock);
@@ -131,8 +126,6 @@ DaqDOut(d,0,255);
 DaqDOut(d,0,0);
 
 frameRate = 60;     % Hz
-
-wininfo = gen_wininfo(result);
 
 % assert(strcmp(ScreenType,'projector') || strcmp(ScreenType,'monitor'));
 % if strcmp(ScreenType,'projector')

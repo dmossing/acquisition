@@ -71,7 +71,7 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = 'Z:/mossing/running/';
+runpath = 'C:/Users/Resonant-2/Documents/Dan/remote/running/';
 % runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
 if ~exist(runfolder,'dir')

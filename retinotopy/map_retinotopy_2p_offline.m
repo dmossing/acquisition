@@ -4,7 +4,7 @@ function [xpos,ypos] = map_retinotopy_2p_offline(varargin) %(ratio,orientations,
 p = inputParser;
 p.addParameter('animalid','Mfake');
 p.addParameter('depth','000');
-p.addParameter('repetitions',3);
+p.addParameter('repetitions',1);
 p.addParameter('rate',2);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
@@ -15,6 +15,7 @@ p.addParameter('orientations',0:45:315);
 p.addParameter('spFreq',0.08); % cyc/vis deg
 p.addParameter('tFreq',2); % cyc/sec
 p.addParameter('range',[-15 15 -15 15])
+p.addParameter('include_inverse',1)
 p.parse(varargin{:});
 
 result = p.Results;
@@ -36,13 +37,14 @@ end
 
 nexp  =  ddigit(length(dir(fullfile(resDirLocal,'*.mat'))),3);
 fnameLocal  =  strcat(resDirLocal,result.animalid,'_',result.depth,'_',nexp,'.mat');
-fnameRemote  =  strcat(resDirRemote,result.animalid,'_',result.depth,'_',nexp,'.mat');
+% fnameRemote  =  strcat(resDirRemote,result.animalid,'_',result.depth,'_',nexp,'.mat');
 result.nexp = nexp;
 
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '//adesnik2.ist.berkeley.edu/excitation/mossing/LF2P/running/';
+runpath = 'C:/Users/Resonant-2/Documents/Dan/remote/running/';
+% runpath = '//adesnik2.ist.berkeley.edu/excitation/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
 if ~exist(runfolder,'dir')
     mkdir(runfolder)
@@ -83,6 +85,7 @@ fileindex = result.nexp;
 
 d = DaqFind;
 err = DaqDConfigPort(d,0,0);
+DaqDOut(d,0,0);
 
 % % write filename
 
@@ -106,14 +109,14 @@ try
     indy = [NaN; indy(:)];
     indx = [NaN; indx(:)];
     indori = [NaN; indori(:)];
-    nstims = 2*(ny*nx*nori+1);
+    nstims = (1+result.include_inverse)*(ny*nx*nori+1);
     order = zeros(result.repetitions*nstims,1); % *2 for inverted and not; +1 for gray and full contrast screens
     for i=1:result.repetitions
         order((i-1)*nstims+1:i*nstims) = randperm(nstims);
     end
     % 0 : uniform. 1:ny*nx : stim location
-    spaceorder = rem(order-1,nstims/2)+1;
-    inverted = (order > nstims/2);
+    spaceorder = rem(order-1,nstims/(1+result.include_inverse))+1;
+    inverted = (order > nstims/(1+result.include_inverse));
     locinds = [indy(spaceorder), indx(spaceorder), indori(spaceorder)];
     result.locs = locs;
     result.locinds = locinds;
@@ -215,7 +218,7 @@ try
     % Close screen
     Screen('CloseAll');
     save(fnameLocal, 'result');
-    save(fnameRemote, 'result');
+%     save(fnameRemote, 'result');
     
 catch
     disp('error')
@@ -229,7 +232,7 @@ catch
     terminate_udp(H_Scanbox)
     terminate_udp(H_Run)
     save(fnameLocal, 'result');
-    save(fnameRemote, 'result');
+%     save(fnameRemote, 'result');
 end
 
 function terminate_udp(handle)

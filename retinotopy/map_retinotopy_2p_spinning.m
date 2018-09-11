@@ -19,6 +19,8 @@ p.parse(varargin{:});
 result = p.Results;
 % set up DAQ
 
+user_quit = false;
+
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
 stimFolderRemote = '/home/mossing/excitation/mossing/visual_stim/';
@@ -96,32 +98,29 @@ base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
 
-d = DaqFind;
-err = DaqDConfigPort(d,0,0);
+d = configure_mcc_daq;
+
+wininfo = gen_wininfo(result);
 
 % % write filename
 
 fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
 fprintf(H_Scanbox,'G'); %go
 
-pause(5)
+DaqDOut(d,0,0);
+DaqDOut(d,0,255);
 
-% daq=daq.createSession('ni');
-% addDigitalChannel(daq,'Dev3','port0/line0','OutputOnly'); % stim trigger
-% addDigitalChannel(daq,'Dev3','port0/line1','OutputOnly'); % projector LED on
-% addDigitalChannel(daq,'Dev3','port0/line2','OutputOnly'); % complete stim protocol, move in z
+handshook = false;
+while ~handshook
+    TTLin = DaqDIn(d);
+    handshook = TTLin(end)>128;
+end
 
 % set up msocket
 
 srvsock = mslisten(3000);
-% % tell the other PC to open up a socket
-% % outputSingleScan(daq,[0 0 0]);
-% % outputSingleScan(daq,[1 0 0]);
-% % outputSingleScan(daq,[0 0 0]);
-DaqDOut(d,0,0);
-DaqDOut(d,0,255);
 
-pause(3)
+% pause(3)
 % % assume the other PC has responded by requesting a connection by this
 % % point
 sock = msaccept(srvsock);
@@ -131,8 +130,6 @@ DaqDOut(d,0,255);
 DaqDOut(d,0,0);
 
 frameRate = 60;     % Hz
-
-wininfo = gen_wininfo(result);
 
 % assert(strcmp(ScreenType,'projector') || strcmp(ScreenType,'monitor'));
 % if strcmp(ScreenType,'projector')
@@ -147,6 +144,7 @@ wininfo = gen_wininfo(result);
 Bcol = wininfo.Bcol;
 % screenInfo = genscreenInfo(wininfo.xRes,wininfo.yRes,result.VertScreenSize,result.DScreen,wininfo.frameRate,wininfo.Bcol);
 window = wininfo.w; % screenInfo.window;
+
 try
     Screen('DrawTexture',wininfo.w, wininfo.BG);
     Screen('Flip', wininfo.w);
@@ -190,6 +188,8 @@ try
         end
     end
     
+    user_quit = did_you_quit(user_quit);
+    
     %     outputSingleScan(daq,[0 1 0])
     %     outputSingleScan(daq,[1 1 0])
     %     outputSingleScan(daq,[0 1 0])
@@ -226,43 +226,46 @@ try
     % Exit the demo as soon as the user presses a mouse button.
     for repindex=1:result.repetitions
         for i=1:numel(order)
-            % ------ Bookkeeping Variables ------
-            gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
-            gratingFrameIndex = 1; % Which frame of the animation should we show?
-            %         oriIndex = indo(order(i));
-            % We need to redraw the text or else it will disappear after a
-            % subsequent call to Screen('Flip').
-            Screen('DrawTexture',wininfo.w, wininfo.BG);
-            Screen('Flip', wininfo.w);
-            Screen('DrawText', window, 'Click to exit', 0, 0, wininfo.blI);
-            mY = locs(indy(order(i)),indx(order(i)),1);
-            mX = locs(indy(order(i)),indx(order(i)),2);
-            % Draw the sprite at the new location.
-            DaqDOut(d,0,0);
-            DaqDOut(d,0,255);
-            DaqDOut(d,0,127);
-            while gratingFrameIndex < (result.ratio)*numFrames
-                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
-                % Call Screen('Flip') to update the screen.  Note that calling
-                % 'Flip' after we have both erased and redrawn the sprite prevents
-                % the sprite from flickering.
-                Screen('Flip', window);
-                gratingFrameIndex = gratingFrameIndex + 1;
+            if ~user_quit
+                user_quit = did_you_quit(user_quit);
+                % ------ Bookkeeping Variables ------
+                gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
+                gratingFrameIndex = 1; % Which frame of the animation should we show?
+                %         oriIndex = indo(order(i));
+                % We need to redraw the text or else it will disappear after a
+                % subsequent call to Screen('Flip').
+                Screen('DrawTexture',wininfo.w, wininfo.BG);
+                Screen('Flip', wininfo.w);
+                Screen('DrawText', window, 'Click to exit', 0, 0, wininfo.blI);
+                mY = locs(indy(order(i)),indx(order(i)),1);
+                mX = locs(indy(order(i)),indx(order(i)),2);
+                % Draw the sprite at the new location.
+                DaqDOut(d,0,0);
+                DaqDOut(d,0,255);
+                DaqDOut(d,0,127);
+                while gratingFrameIndex < (result.ratio)*numFrames
+                    Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
+                    % Call Screen('Flip') to update the screen.  Note that calling
+                    % 'Flip' after we have both erased and redrawn the sprite prevents
+                    % the sprite from flickering.
+                    Screen('Flip', window);
+                    gratingFrameIndex = gratingFrameIndex + 1;
+                end
+                DaqDOut(d,0,127);
+                DaqDOut(d,0,255);
+                DaqDOut(d,0,0);
+                while gratingFrameIndex < (result.ratio+1)*numFrames
+                    Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
+                    % Call Screen('Flip') to update the screen.  Note that calling
+                    % 'Flip' after we have both erased and redrawn the sprite prevents
+                    % the sprite from flickering.
+                    Screen('Flip', window);
+                    gratingFrameIndex = gratingFrameIndex + 1;
+                end
+                %         outputSingleScan(daq,[0 1 0])
+                %         outputSingleScan(daq,[1 1 0])
+                %         outputSingleScan(daq,[0 1 0])
             end
-            DaqDOut(d,0,127);
-            DaqDOut(d,0,255);
-            DaqDOut(d,0,0);
-            while gratingFrameIndex < (result.ratio+1)*numFrames
-                Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
-                % Call Screen('Flip') to update the screen.  Note that calling
-                % 'Flip' after we have both erased and redrawn the sprite prevents
-                % the sprite from flickering.
-                Screen('Flip', window);
-                gratingFrameIndex = gratingFrameIndex + 1;
-            end
-            %         outputSingleScan(daq,[0 1 0])
-            %         outputSingleScan(daq,[1 1 0])
-            %         outputSingleScan(daq,[0 1 0])
         end
     end
     
@@ -290,8 +293,8 @@ try
     save(fnameRemote, 'result');
     
     % Restore preferences
-%     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
-%     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
+    %     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
+    %     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
     
 catch
     disp('error')
@@ -299,8 +302,8 @@ catch
     % return the user to the familiar MATLAB prompt.
     ShowCursor;
     Screen('CloseAll');
-%     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
-%     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
+    %     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
+    %     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
     psychrethrow(psychlasterror);
     
     for i=1:10
@@ -322,3 +325,11 @@ function terminate_udp(handle)
 fprintf(handle,'S');
 fclose(handle);
 delete(handle);
+
+function user_quit = did_you_quit(user_quit)
+% function not working rn! just returns 'false'
+[keyIsDown, secs, keyCode] = KbCheck;
+user_quit = false;
+% if keyIsDown && KbName(keyCode) == 'q'
+%     user_quit = true;
+% end
