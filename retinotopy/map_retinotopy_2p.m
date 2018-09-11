@@ -4,6 +4,9 @@ mmfile = memmapfile('scanbox.mmap','Writable',true, ...
     'Format', { 'int16' [1 16] 'header' } , 'Repeat', 1);
 flag = 1;
 
+d = daq.createSession('ni');
+d.addDigitalChannel('Dev1','Port1/Line0','OutputOnly')
+
 % Simply rolling average plug-in for Scanbox
 
 % Process all incoming frames until Scanbox stops
@@ -17,7 +20,19 @@ old_trig = 0;
 
 moveon = false;
 
-while(true)
+% [kinp,tkinp] = GetChar;
+
+h = figure;
+
+user_quit = false;
+
+setappdata(0, 'keyPressed', false);
+
+set(h,'KeyPressFcn',@(fig_obj,eventDat) setappdata(0, 'keyPressed', eventDat.Key=='q'))
+
+mchA = zeros(512,796);
+
+while(~user_quit)
     
     while(mmfile.Data.header(1)<0) % wait for a new frame...
         if(mmfile.Data.header(1) == -2) % exit if Scanbox stopped
@@ -28,8 +43,12 @@ while(true)
         moveon = mmfile.Data.header(4);
         if moveon
             disp('received TTL')
+            d.outputSingleScan([0])
+            d.outputSingleScan([1])
+%             pause(1)
             sock = msconnect(server,3000);
             locinds = msrecv(sock);
+            d.outputSingleScan([0])
             ns = max(locinds);
             ny = ns(1); nx = ns(2);
             N = zeros(ny,nx);
@@ -78,6 +97,8 @@ while(true)
     mmfile.Data.header(1) = -1; % signal Scanbox that frame has been consumed!
     
     drawnow limitrate;
+    
+    user_quit = getappdata(0,'keyPressed');
     
 end
 
