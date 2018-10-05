@@ -10,12 +10,13 @@ p.addParameter('stimduration',1);
 p.addParameter('isi',1);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
-p.addParameter('sizes',20);
+p.addParameter('sizes',10);
 p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',1); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',[0 1]);
 p.addParameter('groundContrast',[0 1]);
+p.addParameter('circular',0);
 p.parse(varargin{:});
 
 % choose parameters
@@ -154,6 +155,7 @@ gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
 gratingInfo.Bcol = 128; % Background 0 black, 255 white
 gratingInfo.method = 'symmetric';
 gratingInfo.gtype = 'box';
+gratingInfo.circular = result.circular;
 width  =  PatchRadiusPix;
 gratingInfo.widthLUT = [result.sizes(:) width(:)];
 result.gratingInfo = gratingInfo;
@@ -161,7 +163,8 @@ result.gratingInfo = gratingInfo;
 %load('GammaTable.mat'); % need to do the gamma correction!!
 %CT = (ones(3,1)*correctedTable(:,2)')'/255;
 %Screen('LoadNormalizedGammaTable',w, CT);
-load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+% load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+load('/home/visual-stim/Documents/stims/calibration/new_old_gamma_table_181003','gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
 Screen('DrawTexture',wininfo.w, wininfo.BG);

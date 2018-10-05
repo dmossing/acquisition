@@ -63,6 +63,9 @@ try
     
     window = Screen('OpenWindow', screenNumber, Bcol);
     
+    load('/home/visual-stim/Documents/stims/calibration/new_old_gamma_table_181003','gammaTable2')
+    Screen('LoadNormalizedGammaTable',window,gammaTable2*[1 1 1]);
+    
     %     load('GammaTable.mat');
     %     CT = (ones(3,1)*correctedTable(:,2)')'/255;
     %     Screen('LoadNormalizedGammaTable',window, CT);

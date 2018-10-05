@@ -111,7 +111,7 @@ DaqDOut(d,0,255);
 handshook = false;
 while ~handshook
     TTLin = DaqDIn(d);
-    handshook = TTLin(end)>128;
+    handshook = max(TTLin)>=128;
 end
 
 % set up msocket
@@ -142,6 +142,10 @@ frameRate = 60;     % Hz
 Bcol = wininfo.Bcol;
 % screenInfo = genscreenInfo(wininfo.xRes,wininfo.yRes,result.VertScreenSize,result.DScreen,wininfo.frameRate,wininfo.Bcol);
 window = wininfo.w; % screenInfo.window;
+
+load('/home/visual-stim/Documents/stims/calibration/new_old_gamma_table_181003','gammaTable2')
+Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
+
 try
     Screen('DrawTexture',wininfo.w, wininfo.BG);
     Screen('Flip', wininfo.w);

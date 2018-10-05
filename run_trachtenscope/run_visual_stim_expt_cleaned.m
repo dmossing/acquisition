@@ -157,7 +157,8 @@ result.gratingInfo = gratingInfo;
 %load('GammaTable.mat'); % need to do the gamma correction!!
 %CT = (ones(3,1)*correctedTable(:,2)')'/255;
 %Screen('LoadNormalizedGammaTable',w, CT);
-load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+% load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+load('/home/visual-stim/Documents/stims/calibration/new_old_gamma_table_181003','gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
 Screen('DrawTexture',wininfo.w, wininfo.BG);
