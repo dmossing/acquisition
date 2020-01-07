@@ -3,7 +3,11 @@ function wininfo = gen_wininfo(result)
 % yRes = 768;
 % xRes = 1280; % Dell 170S monitors
 % yRes = 1024;
-Bcol = 128;
+if isfield(result,'isi_luminance')
+    Bcol = round(255*result.isi_luminance);
+else
+    Bcol = 128;
+end
 screenNumber = 0;
 blI = BlackIndex(screenNumber);
 whI = WhiteIndex(screenNumber);

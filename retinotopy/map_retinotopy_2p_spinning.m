@@ -7,7 +7,7 @@ p.addParameter('depth','000');
 p.addParameter('repetitions',3);
 p.addParameter('ratio',1);
 p.addParameter('DScreen',15);
-p.addParameter('VertScreenSize',27);
+p.addParameter('VertScreenSize',30);
 p.addParameter('sizes',10);
 p.addParameter('grid',1)
 p.addParameter('contrast',1);
@@ -16,14 +16,18 @@ p.addParameter('spFreq',0.08); % cyc/vis deg
 p.addParameter('tFreq',2); % cyc/sec
 p.parse(varargin{:});
 
+load('/home/visual-stim/Documents/stims/calibration/current_screen_params.mat','VertScreenSize','current_gamma_table')
+
 result = p.Results;
+
+result.VertScreenSize = VertScreenSize;
 % set up DAQ
 
 user_quit = false;
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = '/home/mossing/excitation/mossing/visual_stim/';
+stimFolderRemote = '/home/mossing/modulation/mossing/visual_stim/';
 stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
@@ -43,7 +47,7 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '//adesnik2.ist.berkeley.edu/excitation/mossing/LF2P/running/';
+runpath = '//adesnik2.ist.berkeley.edu/modulation/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
 if ~exist(runfolder,'dir')
     mkdir(runfolder)
@@ -107,7 +111,7 @@ wininfo = gen_wininfo(result);
 fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
 fprintf(H_Scanbox,'G'); %go
 
-DaqDOut(d,0,0);
+DaqDOut(d,0,1);
 DaqDOut(d,0,255);
 
 handshook = false;
@@ -127,7 +131,7 @@ sock = msaccept(srvsock);
 msclose(srvsock);
 
 DaqDOut(d,0,255);
-DaqDOut(d,0,0);
+DaqDOut(d,0,1);
 
 frameRate = 60;     % Hz
 
@@ -145,7 +149,9 @@ Bcol = wininfo.Bcol;
 % screenInfo = genscreenInfo(wininfo.xRes,wininfo.yRes,result.VertScreenSize,result.DScreen,wininfo.frameRate,wininfo.Bcol);
 window = wininfo.w; % screenInfo.window;
 
-load('/home/visual-stim/Documents/stims/calibration/new_old_gamma_table_181003','gammaTable2')
+% load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+% load('current_gamma_table','current_gamma_table')
+load(current_gamma_table,'gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
 try
@@ -243,7 +249,7 @@ try
                 mY = locs(indy(order(i)),indx(order(i)),1);
                 mX = locs(indy(order(i)),indx(order(i)),2);
                 % Draw the sprite at the new location.
-                DaqDOut(d,0,0);
+                DaqDOut(d,0,1);
                 DaqDOut(d,0,255);
                 DaqDOut(d,0,127);
                 while gratingFrameIndex < (result.ratio)*numFrames
@@ -256,7 +262,7 @@ try
                 end
                 DaqDOut(d,0,127);
                 DaqDOut(d,0,255);
-                DaqDOut(d,0,0);
+                DaqDOut(d,0,1);
                 while gratingFrameIndex < (result.ratio+1)*numFrames
                     Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
                     % Call Screen('Flip') to update the screen.  Note that calling
@@ -276,9 +282,9 @@ try
         %         outputSingleScan(daq,[0 1 0])
         %         outputSingleScan(daq,[1 1 0])
         %         outputSingleScan(daq,[0 1 0])
-        DaqDOut(d,0,0);
+        DaqDOut(d,0,1);
         DaqDOut(d,0,255);
-        DaqDOut(d,0,0);
+        DaqDOut(d,0,1);
     end
     msclose(sock);
     terminate_udp(H_Scanbox)
@@ -313,9 +319,9 @@ catch
         %         outputSingleScan(daq,[0 1 0])
         %         outputSingleScan(daq,[1 1 0])
         %         outputSingleScan(daq,[0 1 0])
-        DaqDOut(d,0,0);
+        DaqDOut(d,0,1);
         DaqDOut(d,0,255);
-        DaqDOut(d,0,0);
+        DaqDOut(d,0,1);
     end
     msclose(sock);
     terminate_udp(H_Scanbox)

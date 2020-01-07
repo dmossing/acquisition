@@ -1,4 +1,4 @@
-function run_figure_ground_expt_with_fullscreen_grating(varargin)
+function run_figure_ground_expt_with_opto_stim(varargin)
 
 p = inputParser;
 p.addParameter('modality','2p');
@@ -16,6 +16,8 @@ p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',[0 1]);
 p.addParameter('groundContrast',[0 1]);
+p.addParameter('lights_on',[0 1]);
+p.addParameter('opto_before_after',0.25);
 p.addParameter('circular',0);
 p.parse(varargin{:});
 
@@ -27,17 +29,17 @@ isi = result.isi;
 stimduration = result.stimduration;
 
 % create all stimulus conditions from the single parameter vectors
-nConds  =  [length(result.orientations) length(result.sizes) length(result.tFreqs) length(result.sFreqs) length(result.contrast) length(result.groundContrast)];
+nConds  =  [length(result.orientations) length(result.sizes) length(result.tFreqs) length(result.sFreqs) length(result.contrast) length(result.groundContrast) length(result.lights_on)];
 allConds  =  prod(nConds);
-% result.allConds = allConds;
-% repPerCond  =  allConds./nConds;
-conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast,result.groundContrast);
+conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast,result.groundContrast, result.lights_on);
 % adding extra that will have full-screen gratings
 nori = numel(result.orientations);
-extraconds = [result.orientations; zeros(1,nori); result.tFreqs(1)*ones(1,nori); ...
-    result.sFreqs(1)*ones(1,nori); zeros(1,nori); ones(1,nori)];
-conds = [conds extraconds];
-allConds = allConds + nori;
+for i=1:numel(result.lights_on)
+    extraconds = [result.orientations; zeros(1,nori); result.tFreqs(1)*ones(1,nori); ...
+        result.sFreqs(1)*ones(1,nori); zeros(1,nori); ones(1,nori); result.lights_on(i)*ones(1,nori)];
+    conds = [conds extraconds];
+    allConds = allConds + nori;
+end
     
 assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
 
@@ -180,7 +182,7 @@ Screen('TextSize',wininfo.w, 14);
 Screen('TextStyle', wininfo.w, 1+2);
 Screen('DrawText', wininfo.w, strcat(num2str(allConds),' Conditions__',...
     num2str(result.repetitions),' Repeats__',...
-    num2str(allConds*result.repetitions*(isi+stimduration)/60),...
+    num2str(allConds*result.repetitions*(isi+2*result.opto_before_after+stimduration)/60),...
     ' min estimated Duration.'), 60, 50, [255 128 0]);
 Screen('DrawText', wininfo.w, strcat('Filename:',fnameLocal,...
     '    Hit any key to continue / q to abort.'), 60, 70, [255 128 0]);
@@ -307,11 +309,19 @@ terminate_udp(H_Run)
             %--
             Screen('DrawTexture',w,BG);
             Screen('DrawText', w, ['trial ' int2str(thisstim.trnum) '/' ...
-                int2str(allConds) 'repetition ' int2str(thisstim.itrial) '/'...
+                int2str(allConds) 'repetition ' int2str(thisstim.itrial) '/' ...
                 int2str(result.repetitions)], 0, 0, [255,0,0]);
             Screen('Flip', w);
             
             WaitSecs(max(0, result.isi-((GetSecs-t0)-trialstart)));
+            to_add = thisstim.thislightson; % fixed 2/28/19
+            lightstart = GetSecs-t0;
+            DaqDOut(d,0,0);
+            DaqDOut(d,0,to_add+0);
+            DaqDOut(d,0,to_add+254);
+            DaqDOut(d,0,to_add+0);
+            
+            WaitSecs(result.opto_before_after);
             
             Screen('DrawTexture',w,BG);
             fliptime  =  Screen('Flip', w);
@@ -321,14 +331,14 @@ terminate_udp(H_Run)
             Screen('DrawTexture',w,BG);
             fliptime  =  Screen('Flip', w);
             result.timestamp(thisstim.trnum)  =  fliptime - t0;
-            
+                       
             %             disp(['trnum: ' num2str(trnum) '   ts: ' num2str(result.timestamp(trnum))]);
             stimstart  =  GetSecs-t0;
             
             % send stim on trigger
-            DaqDOut(d,0,0);
-            DaqDOut(d,0,255);
-            DaqDOut(d,0,0);
+            DaqDOut(d,0,to_add+0);
+            DaqDOut(d,0,to_add+254);
+            DaqDOut(d,0,to_add+0);
             disp('stim on')
             tic
             % show stimulus
@@ -336,15 +346,24 @@ terminate_udp(H_Run)
             %                 fprintf(H_Run,'')
             toc
             
-            DaqDOut(d,0,0);
-            DaqDOut(d,0,255);
-            DaqDOut(d,0,0);
-            disp('stim off')
-            
-            stimt = GetSecs-t0-stimstart;
             Screen('DrawTexture',w,BG);
             Screen('Flip', w);
             Screen('Close',thisstim.tex(:));
+            
+            DaqDOut(d,0,to_add+0);
+            DaqDOut(d,0,to_add+254);
+            DaqDOut(d,0,to_add+0);
+            disp('stim off')
+            
+            stimoff = GetSecs-t0;
+            
+            WaitSecs(result.opto_before_after);
+            
+            DaqDOut(d,0,to_add+0);
+            DaqDOut(d,0,to_add+254);
+            DaqDOut(d,0,to_add+0);
+            DaqDOut(d,0,0);
+            
     end
 
     function result = pickNext(result,trnum,thiscond)
@@ -355,6 +374,7 @@ terminate_udp(H_Run)
             result.gratingInfo.spFreq(trnum) = thiscond(4);
             result.gratingInfo.Contrast(trnum) = thiscond(5);
             result.gratingInfo.groundContrast(trnum) = thiscond(6);
+            result.gratingInfo.lightsOn(trnum) = thiscond(7);
     end
 
     function thisstim = getStim(gratingInfo,trnum)
@@ -366,6 +386,7 @@ terminate_udp(H_Run)
             thisstim.thisfreq = gratingInfo.spFreq(trnum);
             thisstim.thiscontrast = gratingInfo.Contrast(trnum);
             thisstim.thisgcontrast = gratingInfo.groundContrast(trnum);
+            thisstim.thislightson = gratingInfo.lightsOn(trnum);
             thisstim.trnum = trnum;
     end
 end

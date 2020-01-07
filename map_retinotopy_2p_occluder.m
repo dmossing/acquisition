@@ -21,7 +21,7 @@ result = p.Results;
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = '/home/mossing/excitation/mossing/visual_stim/';
+stimFolderRemote = '/home/mossing/modulation/mossing/visual_stim/';
 stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
@@ -41,7 +41,7 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '//adesnik2.ist.berkeley.edu/excitation/mossing/LF2P/running/';
+runpath = '//adesnik2.ist.berkeley.edu/modulation/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
 if ~exist(runfolder,'dir')
     mkdir(runfolder)

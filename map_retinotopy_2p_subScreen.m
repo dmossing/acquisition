@@ -14,15 +14,23 @@ p.addParameter('contrast',1);
 p.addParameter('orientations',0:45:315);
 p.addParameter('spFreq',0.08); % cyc/vis deg
 p.addParameter('tFreq',2); % cyc/sec
-p.addParameter('range',[-15 15 -15 15])
+p.addParameter('range',[-15 15 -15 15]) % xrg(1) xrg(2) yrg(1) yrg(2)
+p.addParameter('await_handshake',1) % xrg(1) xrg(2) yrg(1) yrg(2)
 p.parse(varargin{:});
 
+load('/home/visual-stim/Documents/stims/calibration/current_screen_params.mat','VertScreenSize','current_gamma_table')
+
 result = p.Results;
+
+result.locn_corrected = true; % marker that angular locations are correctly recorded.
+% For data -10/31/18, y-offset was inverted. For data 10/31/18-12/11/18,
+% y-offset was correct but grid locations were inverted.
+
 % set up DAQ
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = '/home/mossing/excitation/mossing/visual_stim/';
+stimFolderRemote = '/home/mossing/modulation/mossing/visual_stim/';
 stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
@@ -42,7 +50,7 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '//adesnik2.ist.berkeley.edu/excitation/mossing/LF2P/running/';
+runpath = '//adesnik2.ist.berkeley.edu/modulation/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
 if ~exist(runfolder,'dir')
     mkdir(runfolder)
@@ -106,33 +114,37 @@ wininfo = gen_wininfo(result);
 fprintf(H_Run,sprintf('G%s/%s_%s_%s.bin', runfolder, base, depth, fileindex));
 fprintf(H_Scanbox,'G'); %go
 
-DaqDOut(d,0,0);
+DaqDOut(d,0,1);
 DaqDOut(d,0,255);
 
-handshook = false;
-while ~handshook
-    TTLin = DaqDIn(d);
-    try
-        handshook = TTLin(end)>128;
-    catch
-        handshook = false;
-    end 
+if result.await_handshake
+    
+    handshook = false;
+    while ~handshook
+        TTLin = DaqDIn(d);
+        try
+            handshook = TTLin(end)>128;
+        catch
+            handshook = false;
+        end
+    end
+    
+    disp('got here')
+    
+    % set up msocket
+    
+    srvsock = mslisten(3000);
+    
+    pause(1)
+    % assume the other PC has responded by requesting a connection by this
+    % point
+    sock = msaccept(srvsock);
+    msclose(srvsock);
+    
 end
 
-disp('got here')
-
-% set up msocket
-
-srvsock = mslisten(3000);
-
-pause(1)
-% % assume the other PC has responded by requesting a connection by this
-% % point
-sock = msaccept(srvsock);
-msclose(srvsock);
-
 DaqDOut(d,0,255);
-DaqDOut(d,0,0);
+DaqDOut(d,0,1);
 
 frameRate = 60;     % Hz
 
@@ -152,7 +164,7 @@ window = wininfo.w; % screenInfo.window;
 try
     Screen('DrawTexture',wininfo.w, wininfo.BG);
     Screen('Flip', wininfo.w);
-%     locs = tileScreen(result.sizes,wininfo,result.grid); %screenInfo);
+    %     locs = tileScreen(result.sizes,wininfo,result.grid); %screenInfo);
     locs = tileSubScreen(result.sizes,wininfo,result.grid,result.range);
     [ny,nx,~] = size(locs);
     nori = numel(result.orientations);
@@ -164,10 +176,12 @@ try
     result.locinds = locinds;
     
     % % % SEND THIS (locinds) TO OTHER PC VIA MSOCKET
-    %     pause(1)
-    %     mssend([ny,nx])
-    pause(1)
-    mssend(sock,locinds)
+    if result.await_handshake
+        pause(1)
+        mssend([ny,nx])
+        pause(1)
+        mssend(sock,locinds)
+    end
     
     nCycles = 0.5;
     numEach = ceil(nCycles*frameRate/result.tFreq);
@@ -196,6 +210,11 @@ try
     %     outputSingleScan(daq,[0 1 0])
     %     outputSingleScan(daq,[1 1 0])
     %     outputSingleScan(daq,[0 1 0])
+    
+    % load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+%     load('current_gamma_table','current_gamma_table')
+    load(current_gamma_table,'gammaTable2')
+    Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
     
     gratingRect = [0 0 sizeGrating sizeGrating]; % The bounding box for our animated sprite
     oriIndex = 1;
@@ -241,7 +260,7 @@ try
             mY = locs(indy(order(i)),indx(order(i)),1);
             mX = locs(indy(order(i)),indx(order(i)),2);
             % Draw the sprite at the new location.
-            DaqDOut(d,0,0);
+            DaqDOut(d,0,1);
             DaqDOut(d,0,255);
             DaqDOut(d,0,127);
             while gratingFrameIndex < (result.ratio)*numFrames
@@ -254,7 +273,7 @@ try
             end
             DaqDOut(d,0,127);
             DaqDOut(d,0,255);
-            DaqDOut(d,0,0);
+            DaqDOut(d,0,1);
             while gratingFrameIndex < (result.ratio+1)*numFrames
                 Screen('DrawTexture', window, gratingFrame(gratingFrameIndex), gratingRect, CenterRectOnPoint(gratingRect, mX, mY));
                 % Call Screen('Flip') to update the screen.  Note that calling
@@ -273,11 +292,13 @@ try
         %         outputSingleScan(daq,[0 1 0])
         %         outputSingleScan(daq,[1 1 0])
         %         outputSingleScan(daq,[0 1 0])
-        DaqDOut(d,0,0);
+        DaqDOut(d,0,1);
         DaqDOut(d,0,255);
-        DaqDOut(d,0,0);
+        DaqDOut(d,0,1);
     end
-    msclose(sock);
+    if result.await_handshake
+        msclose(sock);
+    end
     terminate_udp(H_Scanbox)
     terminate_udp(H_Run)
     
@@ -293,8 +314,8 @@ try
     save(fnameRemote, 'result');
     
     % Restore preferences
-%     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
-%     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
+    %     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
+    %     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
     
 catch
     disp('error')
@@ -302,19 +323,19 @@ catch
     % return the user to the familiar MATLAB prompt.
     ShowCursor;
     Screen('CloseAll');
-%     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
-%     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
+    %     Screen('Preference', 'VisualDebugLevel', screenInfo.oldVisualDebugLevel);
+    %     Screen('Preference', 'SuppressAllWarnings', screenInfo.oldSupressAllWarnings);
     psychrethrow(psychlasterror);
     
     for i=1:10
         %         outputSingleScan(daq,[0 1 0])
         %         outputSingleScan(daq,[1 1 0])
         %         outputSingleScan(daq,[0 1 0])
-        DaqDOut(d,0,0);
+        DaqDOut(d,0,1);
         DaqDOut(d,0,255);
-        DaqDOut(d,0,0);
+        DaqDOut(d,0,1);
     end
-    msclose(sock);
+    %     msclose(sock);
     terminate_udp(H_Scanbox)
     terminate_udp(H_Run)
     save(fnameLocal, 'result');
