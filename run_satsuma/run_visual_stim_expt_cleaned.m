@@ -21,6 +21,8 @@ p.parse(varargin{:});
 % choose parameters
 
 result = p.Results;
+load('C:\Users\shine\Documents\Dan\calibration\current_screen_params.mat','VertScreenSize','current_gamma_table','stimFolderRemote','stimFolderLocal')
+result.VertScreenSize = VertScreenSize;
 
 isi = result.isi;
 stimduration = result.stimduration;
@@ -51,8 +53,8 @@ end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = '/home/visual-stim/excitation/visual_stim/';
-stimFolderLocal = '/home/visual-stim/Documents/StimData/';
+% stimFolderRemote = '/home/visual-stim/excitation/visual_stim/';
+% stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
 if ~exist(resDirRemote,'dir')
@@ -74,9 +76,9 @@ fileindex = result.nexp;
 runpath = '//adesnik2.ist.berkeley.edu/Excitation/mossing/running/';
 % runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
-if ~exist(runfolder,'dir')
-    mkdir(runfolder)
-end
+% if ~exist(runfolder,'dir')
+%     mkdir(runfolder)
+% end
 if strcmp(result.modality,'2p')
     
     % set up scanbox communication
@@ -157,7 +159,8 @@ result.gratingInfo = gratingInfo;
 %load('GammaTable.mat'); % need to do the gamma correction!!
 %CT = (ones(3,1)*correctedTable(:,2)')'/255;
 %Screen('LoadNormalizedGammaTable',w, CT);
-load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+% load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+load(current_gamma_table,'gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
 Screen('DrawTexture',wininfo.w, wininfo.BG);

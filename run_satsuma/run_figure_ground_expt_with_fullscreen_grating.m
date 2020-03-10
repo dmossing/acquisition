@@ -10,17 +10,20 @@ p.addParameter('stimduration',1);
 p.addParameter('isi',3);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
-p.addParameter('sizes',25);
-p.addParameter('sFreqs',0.04); % cyc/vis deg
+p.addParameter('sizes',20);
+p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',2); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',[0 1]);
 p.addParameter('groundContrast',[0 1]);
+p.addParameter('circular',false);
 p.parse(varargin{:});
 
 % choose parameters
 
 result = p.Results;
+load('C:\Users\shine\Documents\Dan\calibration\current_screen_params.mat','VertScreenSize','current_gamma_table','stimFolderRemote','stimFolderLocal')
+result.VertScreenSize = VertScreenSize;
 
 isi = result.isi;
 stimduration = result.stimduration;
@@ -57,8 +60,8 @@ end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/excitation/mossing/visual_stim/';
-stimFolderLocal = '/home/visual-stim/Documents/StimData/';
+% stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/excitation/mossing/visual_stim/';
+% stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
 if ~exist(resDirRemote,'dir')
@@ -156,6 +159,7 @@ AssertOpenGL;
 
 [gratingInfo.Orientation,gratingInfo.Contrast,gratingInfo.spFreq,...
     gratingInfo.tFreq, gratingInfo.Size, gratingInfo.groundContrast] = deal(zeros(1,allConds*result.repetitions));
+gratingInfo.circular = result.circular;
 gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
 gratingInfo.Bcol = 128; % Background 0 black, 255 white
 gratingInfo.method = 'symmetric';
@@ -168,7 +172,8 @@ result.gratingInfo = gratingInfo;
 %load('GammaTable.mat'); % need to do the gamma correction!!
 %CT = (ones(3,1)*correctedTable(:,2)')'/255;
 %Screen('LoadNormalizedGammaTable',w, CT);
-load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+% load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
+load(current_gamma_table,'gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
 Screen('DrawTexture',wininfo.w, wininfo.BG);

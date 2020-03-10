@@ -21,8 +21,8 @@ PsychImaging('PrepareConfiguration');
 PsychImaging('AddTask', 'General', 'UsePanelFitter', fitSize, 'Aspect');
 
 Screen('Preference', 'VBLTimestampingMode', -1);
-Screen('Preference','SkipSyncTests', 1); %%% TEMPORARY
-% Screen('Preference','SkipSyncTests', 0);
+% Screen('Preference','SkipSyncTests', 1); %%% TEMPORARY
+Screen('Preference','SkipSyncTests', 0);
 
 % Center small framebuffer inside big framebuffer. Scale it up to
 % maximum size while preserving aspect ration of the original

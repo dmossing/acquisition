@@ -18,9 +18,11 @@ p.addParameter('range',[-15 15 -15 15]) % xrg(1) xrg(2) yrg(1) yrg(2)
 p.addParameter('await_handshake',1) % xrg(1) xrg(2) yrg(1) yrg(2)
 p.parse(varargin{:});
 
-load('/home/visual-stim/Documents/stims/calibration/current_screen_params.mat','VertScreenSize','current_gamma_table')
+% load('/home/visual-stim/Documents/stims/calibration/current_screen_params.mat','VertScreenSize','current_gamma_table')
 
 result = p.Results;
+load('C:\Users\shine\Documents\Dan\calibration\current_screen_params.mat','VertScreenSize','current_gamma_table','stimFolderRemote','stimFolderLocal')
+result.VertScreenSize = VertScreenSize;
 
 result.locn_corrected = true; % marker that angular locations are correctly recorded.
 % For data -10/31/18, y-offset was inverted. For data 10/31/18-12/11/18,
@@ -30,8 +32,10 @@ result.locn_corrected = true; % marker that angular locations are correctly reco
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = '/home/mossing/modulation/mossing/visual_stim/';
-stimFolderLocal = '/home/visual-stim/Documents/StimData/';
+% stimFolderRemote = '/home/mossing/modulation/mossing/visual_stim/';
+% stimFolderLocal = '/home/visual-stim/Documents/StimData/';
+% stimFolderRemote = '/home/mossing/modulation/mossing/visual_stim/';
+% stimFolderLocal = 'C:\Users\shine\Documents\Dan\StimData\';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
 if ~exist(resDirRemote,'dir')
@@ -52,9 +56,9 @@ depth = result.depth;
 fileindex = result.nexp;
 runpath = '//adesnik2.ist.berkeley.edu/modulation/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
-if ~exist(runfolder,'dir')
-    mkdir(runfolder)
-end
+% if ~exist(runfolder,'dir')
+%     mkdir(runfolder)
+% end
 
 % if strcmp(result.modality,'2p')
 

@@ -23,10 +23,10 @@ p.parse(varargin{:});
 
 % choose parameters
 
-load('/home/visual-stim/Documents/stims/calibration/current_screen_params.mat','VertScreenSize','current_gamma_table')
+% load('/home/visual-stim/Documents/stims/calibration/current_screen_params.mat','VertScreenSize','current_gamma_table')
 
 result = p.Results;
-
+load('C:\Users\shine\Documents\Dan\calibration\current_screen_params.mat','VertScreenSize','current_gamma_table','stimFolderRemote','stimFolderLocal')
 result.VertScreenSize = VertScreenSize;
 
 stim_vars = result.gen_stim_vars_fn();
@@ -58,8 +58,8 @@ end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/mossing/LF2P/StimData/';
-stimFolderLocal = '/home/visual-stim/Documents/StimData/';
+% stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/mossing/LF2P/StimData/';
+% stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
 if ~exist(resDirRemote,'dir')
@@ -80,9 +80,9 @@ depth = result.depth;
 fileindex = result.nexp;
 runpath = 'C:/Users/Resonant-2/Documents/Dan/remote/running/';
 runfolder = [runpath dstr '/' base];
-if ~exist(runfolder,'dir')
-    mkdir(runfolder)
-end
+% if ~exist(runfolder,'dir')
+%     mkdir(runfolder)
+% end
 if strcmp(result.modality,'2p')
     
     % set up scanbox communication
