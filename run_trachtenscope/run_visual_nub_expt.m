@@ -1,4 +1,4 @@
-function run_visual_stim_expt_cleaned(varargin)
+function run_visual_nub_expt(varargin)
 
 p = inputParser;
 p.addParameter('modality','2p');
@@ -7,32 +7,56 @@ p.addParameter('depth','000');
 p.addParameter('orientations',0:45:315);
 p.addParameter('repetitions',10);
 p.addParameter('stimduration',1);
-p.addParameter('isi',3);
+p.addParameter('isi',1);
 p.addParameter('DScreen',15);
 p.addParameter('VertScreenSize',27);
-p.addParameter('sizes',25);
+p.addParameter('sizes',10);
 p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',1); % cyc/sec
 p.addParameter('position',[0,0]);
 p.addParameter('contrast',1);
-p.addParameter('circular',0);
+p.addParameter('circular',1);
+p.addParameter('iso',0);
+p.addParameter('cross',1);
+p.addParameter('rotate',0);
+p.addParameter('askew',0);
 p.parse(varargin{:});
 
 % choose parameters
 
 result = p.Results;
-load('C:\Users\shine\Documents\Dan\calibration\current_screen_params.mat','VertScreenSize','current_gamma_table','stimFolderRemote','stimFolderLocal')
-result.VertScreenSize = VertScreenSize;
+
+if result.rotate
+    result.orientations = -1;
+end
+
+nubVals = {[0 1],[0 1],[0 1],[0 1],[0 1]};
+result.nubs = makeAllCombos(nubVals{:})';
 
 isi = result.isi;
 stimduration = result.stimduration;
 
 % create all stimulus conditions from the single parameter vectors
-nConds  =  [length(result.orientations) length(result.sizes) length(result.tFreqs) length(result.sFreqs) length(result.contrast)];
-allConds  =  prod(nConds);
+
 % result.allConds = allConds;
 % repPerCond  =  allConds./nConds;
-conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast);
+
+if result.iso
+    condsIso  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast,0,result.askew,nubVals{:});
+    if result.cross
+        condsCross  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast,1,result.askew,1,nubVals{2:end});
+        % if including both iso and cross, use cross stims only when the center grating is present
+    else
+        condsCross = [];
+    end
+elseif result.cross
+    condsCross  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast,1,result.askew,nubVals{:});
+    condsIso = [];
+end
+
+conds = [condsIso condsCross];
+
+allConds = size(conds,2);
 
 assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
 
@@ -53,8 +77,8 @@ end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-% stimFolderRemote = '/home/visual-stim/excitation/visual_stim/';
-% stimFolderLocal = '/home/visual-stim/Documents/StimData/';
+stimFolderRemote = '/home/visual-stim/modulation/visual_stim/';
+stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
 if ~exist(resDirRemote,'dir')
@@ -73,12 +97,12 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '//adesnik2.ist.berkeley.edu/Excitation/mossing/running/';
+runpath = 'C:/Users/Resonant-2/Documents/Dan/remote/running/';
 % runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
-% if ~exist(runfolder,'dir')
-%     mkdir(runfolder)
-% end
+if ~exist(runfolder,'dir')
+    mkdir(runfolder)
+end
 if strcmp(result.modality,'2p')
     
     % set up scanbox communication
@@ -146,7 +170,8 @@ AssertOpenGL;
 % result.frameRate  =  frameRate;
 
 [gratingInfo.Orientation,gratingInfo.Contrast,gratingInfo.spFreq,...
-    gratingInfo.tFreq, gratingInfo.Size] = deal(zeros(1,allConds*result.repetitions));
+    gratingInfo.tFreq, gratingInfo.Size,gratingInfo.crossOrientation,gratingInfo.Askew] = deal(zeros(1,allConds*result.repetitions));
+gratingInfo.Nubs = zeros(5,allConds*result.repetitions);
 gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
 gratingInfo.Bcol = 128; % Background 0 black, 255 white
 gratingInfo.method = 'symmetric';
@@ -160,7 +185,7 @@ result.gratingInfo = gratingInfo;
 %CT = (ones(3,1)*correctedTable(:,2)')'/255;
 %Screen('LoadNormalizedGammaTable',w, CT);
 % load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
-load(current_gamma_table,'gammaTable2')
+load('/home/visual-stim/Documents/stims/calibration/new_old_gamma_table_181003','gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
 Screen('DrawTexture',wininfo.w, wininfo.BG);
@@ -238,7 +263,7 @@ else
 %             numFrames = numel(thisstim.tex);
             thisstim.movieDurationFrames = movieDurationFrames;
 %             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
-            thisstim = gen_gratings(wininfo,result.gratingInfo,thisstim);
+            thisstim = gen_nubs(wininfo,result.gratingInfo,thisstim);
             
             result = deliver_stim(result,wininfo,thisstim,d);
             
@@ -264,7 +289,7 @@ else
     Screen('Flip', wininfo.w);
     
     FlushEvents;
-    [kinp,tkinp] = GetChar;
+%     [kinp,tkinp] = GetChar;
     Screen('CloseAll');
     Priority(0);
     
@@ -344,6 +369,9 @@ terminate_udp(H_Run)
             result.gratingInfo.tFreq(trnum) = thiscond(3);
             result.gratingInfo.spFreq(trnum) = thiscond(4);
             result.gratingInfo.Contrast(trnum) = thiscond(5);
+            result.gratingInfo.crossOrientation(trnum) = thiscond(6);
+            result.gratingInfo.Askew(trnum) = thiscond(7);
+            result.gratingInfo.Nubs(:,trnum) = thiscond(8:end);
     end
 
     function thisstim = getStim(gratingInfo,trnum)
@@ -354,6 +382,9 @@ terminate_udp(H_Run)
             thisstim.thisspeed = gratingInfo.tFreq(trnum);
             thisstim.thisfreq = gratingInfo.spFreq(trnum);
             thisstim.thiscontrast = gratingInfo.Contrast(trnum);
+            thisstim.thiscross = gratingInfo.crossOrientation(trnum);
+            thisstim.thisnubs = gratingInfo.Nubs(:,trnum);
+            thisstim.thisaskew = gratingInfo.Askew(trnum);
             thisstim.trnum = trnum;
     end
 end

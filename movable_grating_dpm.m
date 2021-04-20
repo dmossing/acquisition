@@ -30,8 +30,12 @@ if strcmp(ScreenType,'projector')
     VertCRTSize = 13;
 else
     xRes = 1280; yRes = 1024;
-    VertCRTSize = 27;
+    VertCRTSize = 30;
 end
+
+load('C:\Users\shine\Documents\Dan\calibration\current_screen_params.mat','VertScreenSize','current_gamma_table')
+VertCRTSize = VertScreenSize;
+
 % dos(['C:\Users\Resonant-2\Downloads\nir cmd-x64\nircmd.exe setdisplay ' num2str(xRes) ' ' num2str(yRes) ' 32']);
 xovy = xRes/yRes;
 % DScreen=15;         % cm
@@ -62,8 +66,8 @@ try
     oldSupressAllWarnings = Screen('Preference', 'SuppressAllWarnings', 1);
     
     window = Screen('OpenWindow', screenNumber, Bcol);
-    
-    load('/home/visual-stim/Documents/stims/calibration/new_old_gamma_table_181003','gammaTable2')
+    load(current_gamma_table,'gammaTable2')
+%     load('/home/visual-stim/Documents/stims/calibration/new_old_gamma_table_181003','gammaTable2')
     Screen('LoadNormalizedGammaTable',window,gammaTable2*[1 1 1]);
     
     %     load('GammaTable.mat');

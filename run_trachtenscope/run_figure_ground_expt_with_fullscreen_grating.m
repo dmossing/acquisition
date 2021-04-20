@@ -58,7 +58,7 @@ end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/excitation/mossing/visual_stim/';
+stimFolderRemote = 'smb://adesnik2.ist.berkeley.edu/modulation/mossing/visual_stim/';
 stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
@@ -78,12 +78,12 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '/home/visual-stim/excitation/running/';
+runpath = '/home/visual-stim/modulation/running/';
 runfolder = [runpath dstr '/' base];
 % if ~exist(runfolder,'dir')
 %     mkdir(runfolder)
 % end
-runpath = '//adesnik2.ist.berkeley.edu/Excitation/mossing/running/';
+runpath = '//adesnik2.ist.berkeley.edu/modulation/mossing/running/';
 runfolder = [runpath dstr '/' base];
 % if ~exist(runfolder,'dir')
 %     mkdir(runfolder)

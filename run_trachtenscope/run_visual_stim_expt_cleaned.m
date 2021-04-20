@@ -9,7 +9,7 @@ p.addParameter('repetitions',10);
 p.addParameter('stimduration',1);
 p.addParameter('isi',3);
 p.addParameter('DScreen',15);
-p.addParameter('VertScreenSize',27);
+p.addParameter('VertScreenSize',30);
 p.addParameter('sizes',25);
 p.addParameter('sFreqs',0.08); % cyc/vis deg
 p.addParameter('tFreqs',1); % cyc/sec
@@ -51,7 +51,7 @@ end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-stimFolderRemote = '/home/visual-stim/excitation/visual_stim/';
+stimFolderRemote = '/home/visual-stim/modulation/visual_stim/';
 stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
@@ -262,7 +262,7 @@ else
     Screen('Flip', wininfo.w);
     
     FlushEvents;
-    [kinp,tkinp] = GetChar;
+%     [kinp,tkinp] = GetChar;
     Screen('CloseAll');
     Priority(0);
     

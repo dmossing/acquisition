@@ -1,38 +1,29 @@
-function run_visual_stim_expt_cleaned(varargin)
+function run_luminance_expt(varargin)
 
 p = inputParser;
 p.addParameter('modality','2p');
 p.addParameter('animalid','Mfake');
 p.addParameter('depth','000');
-p.addParameter('orientations',0:45:315);
 p.addParameter('repetitions',10);
-p.addParameter('stimduration',1);
-p.addParameter('isi',3);
-p.addParameter('DScreen',15);
-p.addParameter('VertScreenSize',27);
-p.addParameter('sizes',25);
-p.addParameter('sFreqs',0.08); % cyc/vis deg
-p.addParameter('tFreqs',1); % cyc/sec
-p.addParameter('position',[0,0]);
-p.addParameter('contrast',1);
-p.addParameter('circular',0);
+p.addParameter('intensities',logspace(-2,0,10));
+p.addParameter('stimduration',5);
+p.addParameter('isi',5);
+p.addParameter('isi_luminance',0);
 p.parse(varargin{:});
 
 % choose parameters
 
 result = p.Results;
-load('C:\Users\shine\Documents\Dan\calibration\current_screen_params.mat','VertScreenSize','current_gamma_table','stimFolderRemote','stimFolderLocal')
-result.VertScreenSize = VertScreenSize;
 
 isi = result.isi;
 stimduration = result.stimduration;
 
 % create all stimulus conditions from the single parameter vectors
-nConds  =  [length(result.orientations) length(result.sizes) length(result.tFreqs) length(result.sFreqs) length(result.contrast)];
+nConds  =  [length(result.intensities)];
 allConds  =  prod(nConds);
 % result.allConds = allConds;
 % repPerCond  =  allConds./nConds;
-conds  =  makeAllCombos(result.orientations,result.sizes,result.tFreqs,result.sFreqs,result.contrast);
+conds  =  makeAllCombos(result.intensities);
 
 assert(strcmp(result.modality,'2p') || strcmp(result.modality,'lf'));
 
@@ -41,11 +32,6 @@ wininfo = gen_wininfo(result);
 movieDurationSecs = result.stimduration;
 movieDurationFrames = round(movieDurationSecs * wininfo.frameRate);
 
-PatchRadiusPix = ceil(result.sizes.*wininfo.PixperDeg/2); % radius!!
-
-x0 = floor(wininfo.xRes/2 + (wininfo.xposStim - result.sizes/2)*wininfo.PixperDeg);
-y0 = floor(wininfo.yRes/2 + (-wininfo.yposStim - result.sizes/2)*wininfo.PixperDeg);
-
 if ~isempty(find(x0<1)) | ~isempty(find(y0<1))
     disp('too big for the monitor, dude! try other parameters');
     return;
@@ -53,8 +39,8 @@ end
 
 % do stimulus data file management
 % stimfolder = 'C:/Users/Resonant-2/Documents/Dan/StimData/';
-% stimFolderRemote = '/home/visual-stim/excitation/visual_stim/';
-% stimFolderLocal = '/home/visual-stim/Documents/StimData/';
+stimFolderRemote = '/home/visual-stim/excitation/visual_stim/';
+stimFolderLocal = '/home/visual-stim/Documents/StimData/';
 dstr = yymmdd(date);
 resDirRemote = [stimFolderRemote dstr '/' result.animalid '/'];
 if ~exist(resDirRemote,'dir')
@@ -73,12 +59,12 @@ result.nexp = nexp;
 base = result.animalid;
 depth = result.depth;
 fileindex = result.nexp;
-runpath = '//adesnik2.ist.berkeley.edu/Excitation/mossing/running/';
+runpath = 'C:/Users/Resonant-2/Documents/Dan/remote/running/';
 % runpath = '//adesnik2.ist.berkeley.edu/Inhibition/mossing/LF2P/running/';
 runfolder = [runpath dstr '/' base];
-% if ~exist(runfolder,'dir')
-%     mkdir(runfolder)
-% end
+if ~exist(runfolder,'dir')
+    mkdir(runfolder)
+end
 if strcmp(result.modality,'2p')
     
     % set up scanbox communication
@@ -145,22 +131,16 @@ AssertOpenGL;
 % end
 % result.frameRate  =  frameRate;
 
-[gratingInfo.Orientation,gratingInfo.Contrast,gratingInfo.spFreq,...
-    gratingInfo.tFreq, gratingInfo.Size] = deal(zeros(1,allConds*result.repetitions));
+[gratingInfo.Intensity] = deal(zeros(1,allConds*result.repetitions));
 gratingInfo.gf = 5;%.Gaussian width factor 5: reveal all .5 normal fall off
-gratingInfo.Bcol = 128; % Background 0 black, 255 white
-gratingInfo.method = 'symmetric';
-gratingInfo.gtype = 'box';
-gratingInfo.circular = result.circular;
-width  =  PatchRadiusPix;
-gratingInfo.widthLUT = [result.sizes(:) width(:)];
+gratingInfo.Bcol = 0; % Background 0 black, 255 white
 result.gratingInfo = gratingInfo;
 
 %load('GammaTable.mat'); % need to do the gamma correction!!
 %CT = (ones(3,1)*correctedTable(:,2)')'/255;
 %Screen('LoadNormalizedGammaTable',w, CT);
 % load('/home/visual-stim/Documents/stims/calibration/gamma_correction_170803','gammaTable2')
-load(current_gamma_table,'gammaTable2')
+load('/home/visual-stim/Documents/stims/calibration/new_old_gamma_table_181003','gammaTable2')
 Screen('LoadNormalizedGammaTable',wininfo.w,gammaTable2*[1 1 1]);
 
 Screen('DrawTexture',wininfo.w, wininfo.BG);
@@ -199,17 +179,6 @@ else
     for itrial = 1:result.repetitions,
         tmpcond = conds;
         
-%         % randomize direction 50/50%
-%         for i = 1:length(orientations)
-%             %             rp = randperm((allConds-2)/length(orientations));
-% % -2 for the two control conditions with no grating visible
-%             
-%             rp = randperm((allConds)/length(orientations)); 
-% % -2 for the two control conditions with no grating visible
-%             thisoriinds = find(tmpcond(1,:) == orientations(i));
-%             tmpcond(1,thisoriinds(rp(1:floor(length(rp)/2)))) = orientations(i)+180;
-%         end
-        
         conddone = 1:size(conds,2);
         while ~isempty(tmpcond)
             %             [kinp,tkinp] = GetChar;
@@ -234,11 +203,9 @@ else
             thisstim = getStim(result.gratingInfo,trnum);
             thisstim.itrial = itrial;
             
-%             thisstim.tex = gen_gratings(wininfo,result.gratingInfo,thisstim);
-%             numFrames = numel(thisstim.tex);
             thisstim.movieDurationFrames = movieDurationFrames;
 %             thisstim.movieFrameIndices = mod(0:(movieDurationFrames-1), numFrames) + 1;
-            thisstim = gen_gratings(wininfo,result.gratingInfo,thisstim);
+            thisstim = gen_uniform(wininfo,result.gratingInfo,thisstim);
             
             result = deliver_stim(result,wininfo,thisstim,d);
             
@@ -316,9 +283,9 @@ terminate_udp(H_Run)
             stimstart  =  GetSecs-t0;
             
             % send stim on trigger
-            DaqDOut(d,0,0);
+            DaqDOut(d,0,1);
             DaqDOut(d,0,255);
-            DaqDOut(d,0,0);
+            DaqDOut(d,0,1);
             disp('stim on')
             tic
             % show stimulus
@@ -326,9 +293,9 @@ terminate_udp(H_Run)
             %                 fprintf(H_Run,'')
             toc
             
-            DaqDOut(d,0,0);
+            DaqDOut(d,0,1);
             DaqDOut(d,0,255);
-            DaqDOut(d,0,0);
+            DaqDOut(d,0,1);
             disp('stim off')
             
             stimt = GetSecs-t0-stimstart;
@@ -338,22 +305,12 @@ terminate_udp(H_Run)
     end
 
     function result = pickNext(result,trnum,thiscond)
-            result.gratingInfo.Orientation(trnum) = thiscond(1); 
+            result.gratingInfo.Intensity(trnum) = thiscond(1); 
             % don't do this anymore, now happens while building conds: +((randi(2)-1)*180);
-            result.gratingInfo.Size(trnum) = thiscond(2);
-            result.gratingInfo.tFreq(trnum) = thiscond(3);
-            result.gratingInfo.spFreq(trnum) = thiscond(4);
-            result.gratingInfo.Contrast(trnum) = thiscond(5);
     end
 
     function thisstim = getStim(gratingInfo,trnum)
-            bin = (gratingInfo.widthLUT(:,1) == gratingInfo.Size(trnum));
-            thisstim.thiswidth = gratingInfo.widthLUT(bin,2);
-            thisstim.thisdeg = gratingInfo.Orientation(trnum);
-            thisstim.thissize = gratingInfo.Size(trnum);
-            thisstim.thisspeed = gratingInfo.tFreq(trnum);
-            thisstim.thisfreq = gratingInfo.spFreq(trnum);
-            thisstim.thiscontrast = gratingInfo.Contrast(trnum);
+            thisstim.thisintensity = gratingInfo.Intensity;
             thisstim.trnum = trnum;
     end
 end
